@@ -2,11 +2,26 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 )
+
+// Version information - set from main.go via SetVersionInfo
+var (
+	version     = "dev"
+	buildNum    = "local"
+	appName     = "cola-regctl"
+	appLongName = "Command Launcher Registry CLI"
+)
+
+// SetVersionInfo sets version information from main package
+func SetVersionInfo(v, b, n, l string) {
+	version = v
+	buildNum = b
+	appName = n
+	appLongName = l
+}
 
 var (
 	// Global flags
@@ -29,7 +44,18 @@ It provides full CRUD operations for registries, packages, and versions via the 
 
 // Execute executes the root command
 func Execute() error {
+	// Set version info before executing
+	rootCmd.Version = version
+	rootCmd.SetVersionTemplate(versionTemplate())
 	return rootCmd.Execute()
+}
+
+// versionTemplate returns the version output template
+func versionTemplate() string {
+	if buildNum != "" && buildNum != "local" {
+		return fmt.Sprintf("%s version %s (build %s)\n", appName, version, buildNum)
+	}
+	return fmt.Sprintf("%s version %s\n", appName, version)
 }
 
 func init() {
@@ -55,10 +81,4 @@ func init() {
 // getGlobalFlags returns the global flag values
 func getGlobalFlags() (url, token string, jsonOutput, verbose bool, timeout time.Duration, yes bool) {
 	return flagURL, flagToken, flagJSON, flagVerbose, flagTimeout, flagYes
-}
-
-// printVersion prints version information (placeholder for now)
-func printVersion() {
-	fmt.Println("cola-regctl version 0.1.0")
-	os.Exit(0)
 }

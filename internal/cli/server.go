@@ -17,11 +17,27 @@ import (
 
 // Exit codes
 const (
-	ExitCodeOK                   = 0
-	ExitCodeInvalidConfig        = 1
-	ExitCodeStorageInitFailed    = 2
-	ExitCodeServerStartupFailed  = 3
+	ExitCodeOK                  = 0
+	ExitCodeInvalidConfig       = 1
+	ExitCodeStorageInitFailed   = 2
+	ExitCodeServerStartupFailed = 3
 )
+
+// Version information - set from main.go via SetVersionInfo
+var (
+	version     = "dev"
+	buildNum    = "local"
+	appName     = "cola-registry"
+	appLongName = "Command Launcher Registry Server"
+)
+
+// SetVersionInfo sets version information from main package
+func SetVersionInfo(v, b, n, l string) {
+	version = v
+	buildNum = b
+	appName = n
+	appLongName = l
+}
 
 var v *viper.Viper
 
@@ -167,8 +183,14 @@ func logEffectiveConfig(cfg *config.Config, logger *slog.Logger) {
 		tokenDisplay = "(not set)"
 	}
 
+	// Format version string
+	versionStr := version
+	if buildNum != "" && buildNum != "local" {
+		versionStr = fmt.Sprintf("%s (build %s)", version, buildNum)
+	}
+
 	logger.Info("Server starting with configuration",
-		"version", "1.0.0",
+		"version", versionStr,
 		"storage_uri", cfg.Storage.URI,
 		"storage_token", tokenDisplay,
 		"port", cfg.Server.Port,
