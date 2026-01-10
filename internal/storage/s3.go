@@ -12,7 +12,7 @@ import (
 // It embeds BaseStorage for in-memory CRUD operations and provides
 // S3-based persistence via persist().
 type S3Storage struct {
-	*BaseStorage       // Embedded for shared CRUD logic
+	*BaseStorage // Embedded for shared CRUD logic
 	client       *S3Client
 	bucket       string
 	key          string

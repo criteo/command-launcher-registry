@@ -14,8 +14,8 @@ import (
 // It embeds BaseStorage for in-memory CRUD operations and provides
 // file-based persistence via saveToFile().
 type FileStorage struct {
-	*BaseStorage         // Embedded for shared CRUD logic
-	filePath     string  // Path to storage file
+	*BaseStorage        // Embedded for shared CRUD logic
+	filePath     string // Path to storage file
 }
 
 // NewFileStorage creates a new file-based storage

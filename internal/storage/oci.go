@@ -12,7 +12,7 @@ import (
 // It embeds BaseStorage for in-memory CRUD operations and provides
 // OCI-based persistence via pushToOCI().
 type OCIStorage struct {
-	*BaseStorage       // Embedded for shared CRUD logic
+	*BaseStorage // Embedded for shared CRUD logic
 	client       *OCIClient
 	reference    string // OCI reference "registry/repo:latest"
 }
