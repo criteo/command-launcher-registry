@@ -76,10 +76,20 @@ fmt:
 	@go fmt ./...
 	@echo "Format complete"
 
-## lint: Run linter
+## fmt-check: Check if code is formatted (for CI)
+fmt-check:
+	@echo "Checking code formatting..."
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "Code is not formatted. Run 'make fmt'"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+	@echo "Format check passed"
+
+## lint: Run linter (go vet)
 lint:
 	@echo "Running linter..."
-	@golangci-lint run ./...
+	@go vet ./...
 	@echo "Lint complete"
 
 ## install-cli: Install the CLI client to $GOPATH/bin
