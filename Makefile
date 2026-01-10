@@ -7,21 +7,41 @@ BUILD_DIR=bin
 DIST_DIR=dist
 CMD_DIR=cmd/cola-registry
 CLI_CMD_DIR=cmd/cola-regctl
-LDFLAGS=-s -w
+
+# Version variables - can be overridden via environment or command line
+VERSION ?= dev
+BUILD_NUM ?= $(shell date +%Y%m%d-%H%M%S)
+APP_NAME_SERVER = cola-registry
+APP_LONG_NAME_SERVER = Command Launcher Registry Server
+APP_NAME_CLI = cola-regctl
+APP_LONG_NAME_CLI = Command Launcher Registry CLI
+
+# Build flags
+LDFLAGS_BASE = -s -w
+LDFLAGS_SERVER = $(LDFLAGS_BASE) \
+	-X 'main.version=$(VERSION)' \
+	-X 'main.buildNum=$(BUILD_NUM)' \
+	-X 'main.appName=$(APP_NAME_SERVER)' \
+	-X 'main.appLongName=$(APP_LONG_NAME_SERVER)'
+LDFLAGS_CLI = $(LDFLAGS_BASE) \
+	-X 'main.version=$(VERSION)' \
+	-X 'main.buildNum=$(BUILD_NUM)' \
+	-X 'main.appName=$(APP_NAME_CLI)' \
+	-X 'main.appLongName=$(APP_LONG_NAME_CLI)'
 
 # Default target
 all: build
 
 ## build: Build the server binary
 build:
-	@echo "Building $(BINARY_NAME)..."
-	@CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
+	@echo "Building $(BINARY_NAME) version=$(VERSION) build=$(BUILD_NUM)..."
+	@CGO_ENABLED=0 go build -ldflags="$(LDFLAGS_SERVER)" -o $(BUILD_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 ## build-cli: Build the CLI client binary
 build-cli:
-	@echo "Building $(CLI_BINARY_NAME)..."
-	@CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(CLI_BINARY_NAME) ./$(CLI_CMD_DIR)
+	@echo "Building $(CLI_BINARY_NAME) version=$(VERSION) build=$(BUILD_NUM)..."
+	@CGO_ENABLED=0 go build -ldflags="$(LDFLAGS_CLI)" -o $(BUILD_DIR)/$(CLI_BINARY_NAME) ./$(CLI_CMD_DIR)
 	@echo "Build complete: $(BUILD_DIR)/$(CLI_BINARY_NAME)"
 
 ## build-all: Build both server and CLI binaries
