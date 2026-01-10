@@ -27,6 +27,7 @@ data/
 *.yaml
 *.yml
 !.golangci.yml
+!.github/**/*.yml
 specs
 !docs/*.yaml
 

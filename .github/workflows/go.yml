@@ -1,0 +1,211 @@
+name: Go
+
+on:
+  push:
+    branches:
+      - "*"
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+      - "test-release-*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  qa:
+    name: QA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Code is not formatted. Run 'go fmt ./...'"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.txt ./...
+
+      - name: Upload coverage
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.txt
+
+  build:
+    name: Build ${{ matrix.os }}/${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    needs: qa
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [darwin, linux, windows]
+        arch: [amd64, arm64]
+        exclude:
+          - os: windows
+            arch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Set version info
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="dev"
+          fi
+          BUILD_NUM=$(date +%Y%m%d-%H%M%S)
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "BUILD_NUM=${BUILD_NUM}" >> $GITHUB_OUTPUT
+
+      - name: Build server
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 0
+        run: |
+          EXT=""
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            EXT=".exe"
+          fi
+          LDFLAGS="-s -w -X 'main.version=${{ steps.version.outputs.VERSION }}' -X 'main.buildNum=${{ steps.version.outputs.BUILD_NUM }}' -X 'main.appName=cola-registry' -X 'main.appLongName=Command Launcher Registry Server'"
+          go build -ldflags="${LDFLAGS}" -o cola-registry${EXT} ./cmd/cola-registry
+
+      - name: Build client
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 0
+        run: |
+          EXT=""
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            EXT=".exe"
+          fi
+          LDFLAGS="-s -w -X 'main.version=${{ steps.version.outputs.VERSION }}' -X 'main.buildNum=${{ steps.version.outputs.BUILD_NUM }}' -X 'main.appName=cola-regctl' -X 'main.appLongName=Command Launcher Registry CLI'"
+          go build -ldflags="${LDFLAGS}" -o cola-regctl${EXT} ./cmd/cola-regctl
+
+      - name: Upload artifacts
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            cola-registry*
+            cola-regctl*
+
+  package:
+    name: Package Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Organize and rename binaries
+        run: |
+          mkdir -p release
+          mkdir -p zip-content
+
+          # Process each platform/arch combination
+          for dir in artifacts/binaries-*; do
+            if [ -d "$dir" ]; then
+              # Extract os and arch from directory name (binaries-os-arch)
+              dirname=$(basename "$dir")
+              os=$(echo "$dirname" | cut -d'-' -f2)
+              arch=$(echo "$dirname" | cut -d'-' -f3)
+
+              # Create directory structure for zip
+              mkdir -p "zip-content/${os}/${arch}"
+
+              # Determine extension
+              ext=""
+              if [ "$os" = "windows" ]; then
+                ext=".exe"
+              fi
+
+              # Copy and rename for individual release
+              if [ -f "$dir/cola-registry${ext}" ]; then
+                cp "$dir/cola-registry${ext}" "release/cola-registry_${os}_${arch}${ext}"
+                cp "$dir/cola-registry${ext}" "zip-content/${os}/${arch}/cola-registry${ext}"
+              fi
+
+              if [ -f "$dir/cola-regctl${ext}" ]; then
+                cp "$dir/cola-regctl${ext}" "release/cola-regctl_${os}_${arch}${ext}"
+                cp "$dir/cola-regctl${ext}" "zip-content/${os}/${arch}/cola-regctl${ext}"
+              fi
+            fi
+          done
+
+          # Create consolidated zip
+          cd zip-content
+          zip -r "../release/cola-registry_${{ steps.version.outputs.VERSION }}.zip" .
+          cd ..
+
+          # List release contents
+          echo "Release contents:"
+          ls -la release/
+
+      - name: Upload release artifacts
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: release/
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: release
+
+      - name: Determine if pre-release
+        id: prerelease
+        run: |
+          if [[ "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+-.+ ]] || [[ "${{ github.ref }}" =~ ^refs/tags/test-release- ]]; then
+            echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          prerelease: ${{ steps.prerelease.outputs.IS_PRERELEASE }}
+          generate_release_notes: true
