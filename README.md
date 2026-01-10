@@ -635,11 +635,3 @@ docker/
 docs/
 └── spec.md                     # Complete specification
 ```
-
-## License
-
-[Add license information]
-
-## Contributing
-
-[Add contribution guidelines]
