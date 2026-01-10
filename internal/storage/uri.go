@@ -14,10 +14,10 @@ var PlannedSchemes = []string{}
 
 // StorageURI represents a parsed storage backend URI
 type StorageURI struct {
-	Scheme string // Storage backend type (e.g., "file", "oci", "s3", "s3+http")
-	Host   string // Host for network backends (optional for file://)
-	Path   string // Path to storage resource
-	Raw    string // Original URI string for logging/debugging
+	Scheme string     // Storage backend type (e.g., "file", "oci", "s3", "s3+http")
+	Host   string     // Host for network backends (optional for file://)
+	Path   string     // Path to storage resource
+	Raw    string     // Original URI string for logging/debugging
 	Query  url.Values // Query parameters (for S3 region)
 }
 

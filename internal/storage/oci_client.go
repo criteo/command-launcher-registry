@@ -20,7 +20,7 @@ import (
 
 // OCI timeout constants per FR-016
 const (
-	OCIPushTimeout = 60 * time.Second  // Increased from 5s - ghcr.io can be slow
+	OCIPushTimeout = 60 * time.Second // Increased from 5s - ghcr.io can be slow
 	OCIPullTimeout = 30 * time.Second
 )
 
