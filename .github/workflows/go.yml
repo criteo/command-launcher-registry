@@ -149,14 +149,14 @@ jobs:
                 ext=".exe"
               fi
 
-              # Copy and rename for individual release
+              # Copy and rename for individual release (with version suffix)
               if [ -f "$dir/cola-registry${ext}" ]; then
-                cp "$dir/cola-registry${ext}" "release/cola-registry_${os}_${arch}${ext}"
+                cp "$dir/cola-registry${ext}" "release/cola-registry_${os}_${arch}_${{ steps.version.outputs.VERSION }}${ext}"
                 cp "$dir/cola-registry${ext}" "zip-content/${os}/${arch}/cola-registry${ext}"
               fi
 
               if [ -f "$dir/cola-regctl${ext}" ]; then
-                cp "$dir/cola-regctl${ext}" "release/cola-regctl_${os}_${arch}${ext}"
+                cp "$dir/cola-regctl${ext}" "release/cola-regctl_${os}_${arch}_${{ steps.version.outputs.VERSION }}${ext}"
                 cp "$dir/cola-regctl${ext}" "zip-content/${os}/${arch}/cola-regctl${ext}"
               fi
             fi
@@ -204,7 +204,7 @@ jobs:
 
           # Determine if pre-release
           PRERELEASE_FLAG=""
-          if [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-.+ ]] || [[ "$VERSION" =~ ^test-release- ]]; then
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-.+ ]] || [[ "$VERSION" =~ ^test-release- ]]; then
             PRERELEASE_FLAG="--prerelease"
           fi
 
