@@ -592,12 +592,15 @@ Credentials are stored at: `~/.config/cola-registry/credentials.yaml`
 ```bash
 make build        # Build server binary
 make build-cli    # Build CLI client binary
-make clean        # Remove artifacts
-make test         # Run tests
-make test-cli     # Run CLI tests
+make build-all    # Build both server and CLI
+make clean        # Remove build artifacts
+make test         # Run all tests
+make test-cli     # Run CLI tests only
 make run          # Build and run server
 make fmt          # Format code
-make lint         # Run linter
+make fmt-check    # Check formatting (for CI)
+make lint         # Run linter (go vet)
+make install-cli  # Install CLI to $GOPATH/bin
 make help         # Show all targets
 ```
 
@@ -605,33 +608,34 @@ make help         # Show all targets
 
 ```
 cmd/
-├── cola-registry/          # Server binary entry point
-└── cola-regctl/            # CLI client binary entry point
+├── cola-registry/              # Server binary entry point
+└── cola-regctl/                # CLI client binary entry point
 internal/
-├── server/                 # HTTP server
-│   ├── handlers/           # HTTP handlers
-│   └── middleware/         # Middleware (auth, logging, etc.)
-├── client/                 # CLI client (NEW)
-│   ├── commands/           # Cobra commands (registry, package, version, login, etc.)
-│   ├── auth/               # Credential storage and authentication
-│   ├── config/             # URL and configuration resolution
-│   ├── output/             # Output formatters (table, JSON)
-│   ├── prompts/            # Interactive prompts
-│   ├── validation/         # Client-side validation
-│   └── errors/             # Error handling and exit codes
-├── storage/                # Storage layer (file, OCI, S3)
-├── models/                 # Shared data models
-├── auth/                   # Server authentication
-├── cli/                    # Server CLI commands
-├── config/                 # Server configuration
-└── apierrors/              # API error types
-scripts/
-├── populate-test-data.sh       # curl-based test data
-├── clean-test-data.sh          # curl-based cleanup
-├── populate-test-data-cli.sh   # CLI-based test data
-└── clean-test-data-cli.sh      # CLI-based cleanup
+├── server/                     # HTTP server
+│   ├── handlers/               # HTTP handlers (health, index, registry, package, version)
+│   └── middleware/             # Middleware (auth, cors, logging, ratelimit)
+├── client/                     # CLI client
+│   ├── commands/               # Cobra commands (registry, package, version, login, etc.)
+│   ├── auth/                   # Credential storage (keyring, file)
+│   ├── config/                 # URL resolution
+│   ├── output/                 # Output formatters (table, JSON)
+│   ├── prompts/                # Interactive prompts
+│   ├── validation/             # Client-side validation
+│   └── errors/                 # Exit codes
+├── storage/                    # Storage backends (file, OCI, S3)
+├── models/                     # Shared data models
+├── auth/                       # Server authentication (basic, none)
+├── cli/                        # Server CLI commands
+├── config/                     # Server configuration
+└── apierrors/                  # API error types
+tests/
+└── integration/                # Integration tests (OCI, S3, server)
+scripts/                        # Test data scripts
 docker/
 └── Dockerfile                  # Multi-stage Docker build
 docs/
-└── spec.md                     # Complete specification
+├── openapi.yaml                # OpenAPI specification
+└── quickstart.md               # Quick start guide
+.github/
+└── workflows/go.yml            # CI/CD pipeline
 ```
