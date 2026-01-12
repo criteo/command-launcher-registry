@@ -31,8 +31,21 @@ type StorageConfig struct {
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	Type      string `mapstructure:"type"`       // none | basic
-	UsersFile string `mapstructure:"users_file"` // for basic auth
+	Type      string     `mapstructure:"type"`       // none | basic | ldap
+	UsersFile string     `mapstructure:"users_file"` // for basic auth
+	LDAP      LDAPConfig `mapstructure:"ldap"`       // for LDAP auth
+}
+
+// LDAPConfig holds LDAP authentication configuration
+type LDAPConfig struct {
+	Server        string `mapstructure:"server"`
+	BindDN        string `mapstructure:"bind_dn"`
+	BindPassword  string `mapstructure:"bind_password"`
+	UserBaseDN    string `mapstructure:"user_base_dn"`
+	UserFilter    string `mapstructure:"user_filter"`
+	GroupBaseDN   string `mapstructure:"group_base_dn"`
+	GroupFilter   string `mapstructure:"group_filter"`
+	RequiredGroup string `mapstructure:"required_group"`
 }
 
 // LoggingConfig holds logging configuration
@@ -53,6 +66,14 @@ func Load() (*Config, error) {
 	v.SetDefault("storage.token", "")
 	v.SetDefault("auth.type", "none")
 	v.SetDefault("auth.users_file", "./users.yaml")
+	v.SetDefault("auth.ldap.server", "")
+	v.SetDefault("auth.ldap.bind_dn", "")
+	v.SetDefault("auth.ldap.bind_password", "")
+	v.SetDefault("auth.ldap.user_base_dn", "")
+	v.SetDefault("auth.ldap.user_filter", "(uid=%s)")
+	v.SetDefault("auth.ldap.group_base_dn", "")
+	v.SetDefault("auth.ldap.group_filter", "(member=%s)")
+	v.SetDefault("auth.ldap.required_group", "")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 
@@ -93,6 +114,14 @@ func NewViper() *viper.Viper {
 	v.SetDefault("storage.token", "")
 	v.SetDefault("auth.type", "none")
 	v.SetDefault("auth.users_file", "./users.yaml")
+	v.SetDefault("auth.ldap.server", "")
+	v.SetDefault("auth.ldap.bind_dn", "")
+	v.SetDefault("auth.ldap.bind_password", "")
+	v.SetDefault("auth.ldap.user_base_dn", "")
+	v.SetDefault("auth.ldap.user_filter", "(uid=%s)")
+	v.SetDefault("auth.ldap.group_base_dn", "")
+	v.SetDefault("auth.ldap.group_filter", "(member=%s)")
+	v.SetDefault("auth.ldap.required_group", "")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 
@@ -118,8 +147,21 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate auth type
-	if c.Auth.Type != "none" && c.Auth.Type != "basic" {
-		return fmt.Errorf("auth.type must be 'none' or 'basic'")
+	if c.Auth.Type != "none" && c.Auth.Type != "basic" && c.Auth.Type != "ldap" {
+		return fmt.Errorf("auth.type must be 'none', 'basic', or 'ldap'")
+	}
+
+	// Validate LDAP config when auth type is ldap
+	if c.Auth.Type == "ldap" {
+		if c.Auth.LDAP.Server == "" {
+			return fmt.Errorf("auth.ldap.server is required when auth.type is 'ldap'")
+		}
+		if c.Auth.LDAP.BindDN == "" {
+			return fmt.Errorf("auth.ldap.bind_dn is required when auth.type is 'ldap'")
+		}
+		if c.Auth.LDAP.UserBaseDN == "" {
+			return fmt.Errorf("auth.ldap.user_base_dn is required when auth.type is 'ldap'")
+		}
 	}
 
 	// Validate logging level

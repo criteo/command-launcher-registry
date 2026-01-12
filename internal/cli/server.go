@@ -43,7 +43,10 @@ func init() {
 	ServerCmd.Flags().String("host", "", "Bind address")
 	ServerCmd.Flags().String("log-level", "", "Log level (debug|info|warn|error)")
 	ServerCmd.Flags().String("log-format", "", "Log format (json|text)")
-	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic)")
+	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap)")
+	ServerCmd.Flags().String("auth-ldap-server", "", "LDAP server URL (e.g., ldap://ldap.example.com)")
+	ServerCmd.Flags().String("auth-ldap-bind-dn", "", "LDAP bind DN for service account")
+	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", "LDAP base DN for user searches")
 
 	// Bind CLI flags to viper
 	v.BindPFlag("storage.uri", ServerCmd.Flags().Lookup("storage-uri"))
@@ -53,6 +56,9 @@ func init() {
 	v.BindPFlag("logging.level", ServerCmd.Flags().Lookup("log-level"))
 	v.BindPFlag("logging.format", ServerCmd.Flags().Lookup("log-format"))
 	v.BindPFlag("auth.type", ServerCmd.Flags().Lookup("auth-type"))
+	v.BindPFlag("auth.ldap.server", ServerCmd.Flags().Lookup("auth-ldap-server"))
+	v.BindPFlag("auth.ldap.bind_dn", ServerCmd.Flags().Lookup("auth-ldap-bind-dn"))
+	v.BindPFlag("auth.ldap.user_base_dn", ServerCmd.Flags().Lookup("auth-ldap-user-base-dn"))
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
@@ -108,6 +114,17 @@ func runServer(cmd *cobra.Command, args []string) error {
 				"users_file", cfg.Auth.UsersFile)
 			os.Exit(ExitCodeStorageInitFailed)
 		}
+	case "ldap":
+		authenticator, err = auth.NewLDAPAuth(cfg.Auth.LDAP, logger)
+		if err != nil {
+			logger.Error("Failed to initialize LDAP auth",
+				"error", err,
+				"server", cfg.Auth.LDAP.Server)
+			os.Exit(ExitCodeStorageInitFailed)
+		}
+		logger.Info("LDAP authentication enabled",
+			"server", cfg.Auth.LDAP.Server,
+			"user_base_dn", cfg.Auth.LDAP.UserBaseDN)
 	default:
 		logger.Error("Unsupported auth type", "auth_type", cfg.Auth.Type)
 		os.Exit(ExitCodeInvalidConfig)

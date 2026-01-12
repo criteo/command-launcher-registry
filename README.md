@@ -212,8 +212,11 @@ Flags:
                            Default: info
   --log-format string      Log format (json|text)
                            Default: json
-  --auth-type string       Authentication type (none|basic)
+  --auth-type string       Authentication type (none|basic|ldap)
                            Default: none
+  --auth-ldap-server string      LDAP server URL (e.g., ldap://ldap.example.com)
+  --auth-ldap-bind-dn string     LDAP bind DN for service account
+  --auth-ldap-user-base-dn string  LDAP base DN for user searches
 ```
 
 ### Environment Variables
@@ -232,6 +235,43 @@ export COLA_REGISTRY_AUTH_USERS_FILE=./users.yaml  # Environment-only (no CLI fl
 ```
 
 Priority order: **CLI flags > Environment variables > Defaults**
+
+### LDAP Authentication
+
+LDAP authentication validates user credentials against an LDAP directory (e.g., Active Directory, OpenLDAP).
+
+**Minimal configuration:**
+
+```bash
+export COLA_REGISTRY_AUTH_TYPE=ldap
+export COLA_REGISTRY_AUTH_LDAP_SERVER=ldap://ldap.example.com
+export COLA_REGISTRY_AUTH_LDAP_BIND_DN=cn=serviceaccount,dc=example,dc=com
+export COLA_REGISTRY_AUTH_LDAP_BIND_PASSWORD=your-bind-password
+export COLA_REGISTRY_AUTH_LDAP_USER_BASE_DN=ou=users,dc=example,dc=com
+
+./bin/cola-registry server
+```
+
+**With group restriction:**
+
+```bash
+# Only allow members of the "registry-admins" group
+export COLA_REGISTRY_AUTH_LDAP_REQUIRED_GROUP=cn=registry-admins,ou=groups,dc=example,dc=com
+export COLA_REGISTRY_AUTH_LDAP_GROUP_BASE_DN=ou=groups,dc=example,dc=com
+```
+
+**LDAP configuration options:**
+
+| Setting | Environment Variable | CLI Flag | Default | Description |
+|---------|---------------------|----------|---------|-------------|
+| Server | `COLA_REGISTRY_AUTH_LDAP_SERVER` | `--auth-ldap-server` | (required) | LDAP server URL |
+| Bind DN | `COLA_REGISTRY_AUTH_LDAP_BIND_DN` | `--auth-ldap-bind-dn` | (required) | Service account DN |
+| Bind Password | `COLA_REGISTRY_AUTH_LDAP_BIND_PASSWORD` | - | (required) | Service account password |
+| User Base DN | `COLA_REGISTRY_AUTH_LDAP_USER_BASE_DN` | `--auth-ldap-user-base-dn` | (required) | Base DN for user searches |
+| User Filter | `COLA_REGISTRY_AUTH_LDAP_USER_FILTER` | - | `(uid=%s)` | LDAP filter for users |
+| Group Base DN | `COLA_REGISTRY_AUTH_LDAP_GROUP_BASE_DN` | - | (empty) | Base DN for group searches |
+| Group Filter | `COLA_REGISTRY_AUTH_LDAP_GROUP_FILTER` | - | `(member=%s)` | LDAP filter for groups |
+| Required Group | `COLA_REGISTRY_AUTH_LDAP_REQUIRED_GROUP` | - | (empty) | DN of required group |
 
 ### Storage URI
 
