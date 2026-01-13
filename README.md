@@ -217,6 +217,8 @@ Flags:
   --auth-ldap-server string      LDAP server URL (e.g., ldap://ldap.example.com)
   --auth-ldap-bind-dn string     LDAP bind DN for service account
   --auth-ldap-user-base-dn string  LDAP base DN for user searches
+  --auth-ldap-timeout int          LDAP connection timeout in seconds
+                                   Default: 30
 ```
 
 ### Environment Variables
@@ -268,6 +270,7 @@ export COLA_REGISTRY_AUTH_LDAP_GROUP_BASE_DN=ou=groups,dc=example,dc=com
 | Bind DN | `COLA_REGISTRY_AUTH_LDAP_BIND_DN` | `--auth-ldap-bind-dn` | (required) | Service account DN |
 | Bind Password | `COLA_REGISTRY_AUTH_LDAP_BIND_PASSWORD` | - | (required) | Service account password |
 | User Base DN | `COLA_REGISTRY_AUTH_LDAP_USER_BASE_DN` | `--auth-ldap-user-base-dn` | (required) | Base DN for user searches |
+| Timeout | `COLA_REGISTRY_AUTH_LDAP_TIMEOUT` | - | `30` | Connection timeout in seconds |
 | User Filter | `COLA_REGISTRY_AUTH_LDAP_USER_FILTER` | - | `(uid=%s)` | LDAP filter for users |
 | Group Base DN | `COLA_REGISTRY_AUTH_LDAP_GROUP_BASE_DN` | - | (empty) | Base DN for group searches |
 | Group Filter | `COLA_REGISTRY_AUTH_LDAP_GROUP_FILTER` | - | `(member=%s)` | LDAP filter for groups |

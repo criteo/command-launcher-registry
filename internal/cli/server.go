@@ -17,10 +17,10 @@ import (
 
 // Exit codes
 const (
-	ExitCodeOK                   = 0
-	ExitCodeInvalidConfig        = 1
-	ExitCodeStorageInitFailed    = 2
-	ExitCodeServerStartupFailed  = 3
+	ExitCodeOK                  = 0
+	ExitCodeInvalidConfig       = 1
+	ExitCodeStorageInitFailed   = 2
+	ExitCodeServerStartupFailed = 3
 )
 
 var v *viper.Viper
@@ -45,6 +45,7 @@ func init() {
 	ServerCmd.Flags().String("log-format", "", "Log format (json|text)")
 	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap)")
 	ServerCmd.Flags().String("auth-ldap-server", "", "LDAP server URL (e.g., ldap://ldap.example.com)")
+	ServerCmd.Flags().Int("auth-ldap-timeout", 30, "LDAP connection timeout (e.g., 30s)")
 	ServerCmd.Flags().String("auth-ldap-bind-dn", "", "LDAP bind DN for service account")
 	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", "LDAP base DN for user searches")
 
@@ -57,6 +58,7 @@ func init() {
 	v.BindPFlag("logging.format", ServerCmd.Flags().Lookup("log-format"))
 	v.BindPFlag("auth.type", ServerCmd.Flags().Lookup("auth-type"))
 	v.BindPFlag("auth.ldap.server", ServerCmd.Flags().Lookup("auth-ldap-server"))
+	v.BindPFlag("auth.ldap.timeout", ServerCmd.Flags().Lookup("auth-ldap-timeout"))
 	v.BindPFlag("auth.ldap.bind_dn", ServerCmd.Flags().Lookup("auth-ldap-bind-dn"))
 	v.BindPFlag("auth.ldap.user_base_dn", ServerCmd.Flags().Lookup("auth-ldap-user-base-dn"))
 }

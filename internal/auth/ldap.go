@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/criteo/command-launcher-registry/internal/config"
 	"github.com/go-ldap/ldap/v3"
@@ -32,6 +35,9 @@ func NewLDAPAuth(cfg config.LDAPConfig, logger *slog.Logger) (*LDAPAuth, error) 
 	if cfg.GroupFilter == "" {
 		cfg.GroupFilter = "(member=%s)"
 	}
+	if cfg.Timeout == 0 {
+		cfg.Timeout = 30
+	}
 
 	return &LDAPAuth{config: cfg, logger: logger}, nil
 }
@@ -40,19 +46,20 @@ func NewLDAPAuth(cfg config.LDAPConfig, logger *slog.Logger) (*LDAPAuth, error) 
 func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 	username, password, ok := r.BasicAuth()
 	if !ok {
-		return nil, fmt.Errorf("missing credentials")
+		return nil, ErrUnauthorized
 	}
 
 	if username == "" || password == "" {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, ErrUnauthorized
 	}
 
-	conn, err := ldap.DialURL(l.config.Server)
+	conn, err := ldap.DialURL(l.config.Server, ldap.DialWithDialer(
+		&net.Dialer{Timeout: time.Duration(l.config.Timeout) * time.Second}))
 	if err != nil {
 		l.logger.Error("Failed to connect to LDAP server",
 			"error", err,
 			"server", l.config.Server)
-		return nil, fmt.Errorf("authentication failed")
+		return nil, fmt.Errorf("server error")
 	}
 	defer conn.Close()
 
@@ -61,7 +68,7 @@ func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 		l.logger.Error("Failed to bind to LDAP server",
 			"error", err,
 			"bind_dn", l.config.BindDN)
-		return nil, fmt.Errorf("authentication failed")
+		return nil, fmt.Errorf("server error")
 	}
 
 	searchRequest := ldap.NewSearchRequest(
@@ -77,20 +84,20 @@ func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 		l.logger.Error("Failed to search for user",
 			"error", err,
 			"username", username)
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrUnauthorized
 	}
 
 	if len(sr.Entries) == 0 {
 		l.logger.Warn("User not found in LDAP",
 			"username", username,
 			"source_ip", r.RemoteAddr)
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrUnauthorized
 	}
 
 	if len(sr.Entries) > 1 {
 		l.logger.Warn("Multiple entries found for user",
 			"username", username)
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrUnauthorized
 	}
 
 	userDN := sr.Entries[0].DN
@@ -100,7 +107,7 @@ func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 		l.logger.Warn("Authentication failed: invalid password",
 			"username", username,
 			"source_ip", r.RemoteAddr)
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrUnauthorized
 	}
 
 	if l.config.RequiredGroup != "" {
@@ -108,7 +115,7 @@ func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 		if err != nil {
 			l.logger.Error("Failed to rebind for group check",
 				"error", err)
-			return nil, fmt.Errorf("authentication failed")
+			return nil, ErrUnauthorized
 		}
 
 		groupSearchRequest := ldap.NewSearchRequest(
@@ -123,7 +130,7 @@ func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 		if err != nil {
 			l.logger.Error("Failed to search for group membership",
 				"error", err)
-			return nil, fmt.Errorf("authentication failed")
+			return nil, ErrUnauthorized
 		}
 
 		if len(gsr.Entries) == 0 {
@@ -131,7 +138,7 @@ func (l *LDAPAuth) Authenticate(r *http.Request) (*User, error) {
 				"username", username,
 				"required_group", l.config.RequiredGroup,
 				"source_ip", r.RemoteAddr)
-			return nil, fmt.Errorf("forbidden")
+			return nil, ErrForbidden
 		}
 	}
 
@@ -148,8 +155,16 @@ func (l *LDAPAuth) Middleware() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := l.Authenticate(r)
 			if err != nil {
-				w.Header().Set("WWW-Authenticate", `Basic realm="COLA Registry"`)
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				if errors.Is(err, ErrUnauthorized) {
+					w.Header().Set("WWW-Authenticate", `Basic realm="COLA Registry"`)
+					http.Error(w, "Unauthorized", http.StatusUnauthorized)
+					return
+				}
+				if errors.Is(err, ErrForbidden) {
+					http.Error(w, "Forbidden", http.StatusForbidden)
+					return
+				}
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 
