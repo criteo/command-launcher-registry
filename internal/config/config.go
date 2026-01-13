@@ -31,9 +31,16 @@ type StorageConfig struct {
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	Type      string     `mapstructure:"type"`       // none | basic | ldap
-	UsersFile string     `mapstructure:"users_file"` // for basic auth
-	LDAP      LDAPConfig `mapstructure:"ldap"`       // for LDAP auth
+	Type      string          `mapstructure:"type"`       // none | basic | custom_jwt | ldap
+	UsersFile string          `mapstructure:"users_file"` // for basic auth
+	LDAP      LDAPConfig      `mapstructure:"ldap"`       // for LDAP auth
+	CustomJWT CustomJWTConfig `mapstructure:"custom_jwt"` // for custom_jwt auth
+}
+
+// CustomJWTConfig holds custom JWT authentication configuration
+type CustomJWTConfig struct {
+	Script        string `mapstructure:"script"`         // Path to script that validates JWT and returns groups
+	RequiredGroup string `mapstructure:"required_group"` // Required group for authorization
 }
 
 // LDAPConfig holds LDAP authentication configuration
@@ -149,8 +156,9 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate auth type
-	if c.Auth.Type != "none" && c.Auth.Type != "basic" && c.Auth.Type != "ldap" {
-		return fmt.Errorf("auth.type must be 'none', 'basic', or 'ldap'")
+	validAuthTypes := map[string]bool{"none": true, "basic": true, "ldap": true, "custom_jwt": true}
+	if !validAuthTypes[c.Auth.Type] {
+		return fmt.Errorf("auth.type must be 'none', 'basic', 'ldap', or 'custom_jwt'")
 	}
 
 	// Validate logging level

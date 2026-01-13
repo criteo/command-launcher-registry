@@ -59,7 +59,7 @@ func init() {
 	ServerCmd.Flags().String("host", "", "Bind address")
 	ServerCmd.Flags().String("log-level", "", "Log level (debug|info|warn|error)")
 	ServerCmd.Flags().String("log-format", "", "Log format (json|text)")
-	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap)")
+	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap|custom_jwk)")
 	ServerCmd.Flags().String("auth-ldap-server", "", "LDAP server URL (e.g., ldap://ldap.example.com)")
 	ServerCmd.Flags().Int("auth-ldap-timeout", 30, "LDAP connection timeout (e.g., 30s)")
 	ServerCmd.Flags().String("auth-ldap-bind-dn", "", "LDAP bind DN for service account")

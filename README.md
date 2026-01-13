@@ -212,7 +212,7 @@ Flags:
                            Default: info
   --log-format string      Log format (json|text)
                            Default: json
-  --auth-type string       Authentication type (none|basic|ldap)
+  --auth-type string       Authentication type (none|basic|ldap|custom_jwt)
                            Default: none
   --auth-ldap-server string      LDAP server URL (e.g., ldap://ldap.example.com)
   --auth-ldap-bind-dn string     LDAP bind DN for service account
@@ -234,6 +234,38 @@ export COLA_REGISTRY_LOGGING_LEVEL=info
 export COLA_REGISTRY_LOGGING_FORMAT=json
 export COLA_REGISTRY_AUTH_TYPE=basic
 export COLA_REGISTRY_AUTH_USERS_FILE=./users.yaml  # Environment-only (no CLI flag)
+```
+
+### Custom JWT Authentication
+
+Custom JWT authentication delegates token validation to an external script. This allows integration with any JWT provider.
+
+**Configuration:**
+```bash
+export COLA_REGISTRY_AUTH_TYPE=custom_jwt
+export COLA_REGISTRY_AUTH_CUSTOM_JWT_SCRIPT=/path/to/jwt-validator.sh
+export COLA_REGISTRY_AUTH_CUSTOM_JWT_REQUIRED_GROUP=my-admin-group  # Optional
+```
+
+**Custom JWT configuration options:**
+
+| Setting | Environment Variable | CLI Flag | Default | Description |
+|---------|---------------------|----------|---------|-------------|
+| Script | `COLA_REGISTRY_AUTH_CUSTOM_JWT_SCRIPT` | `--auth-custom-jwt-script` | (required) | Path to JWT validator script |
+| Required Group | `COLA_REGISTRY_AUTH_CUSTOM_JWT_REQUIRED_GROUP` | `--auth-custom-jwt-required-group` | - | Group required to access registry |
+
+**Script requirements:**
+- Must be executable and in PATH or specified as absolute path
+- Receives JWT token as first argument
+- Exit code 0 = valid token, non-zero = invalid token
+- Output format: one group per line (optionally `username:value` on first line)
+
+**Example script output:**
+```
+username:john.doe
+admin-group
+developers
+readonly-users
 ```
 
 Priority order: **CLI flags > Environment variables > Defaults**
