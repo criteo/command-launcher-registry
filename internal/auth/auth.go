@@ -1,7 +1,13 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
+)
+
+var (
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrForbidden    = errors.New("forbidden")
 )
 
 // User represents an authenticated user
