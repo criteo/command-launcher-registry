@@ -1,6 +1,6 @@
 # Command Launcher Registry
 
-A complete solution for hosting and managing Command Launcher remote registries, featuring both a REST API server and a powerful CLI client (`cola-regctl`) for seamless registry management.
+A complete solution for hosting and managing [Command Launcher](https://criteo.github.io/command-launcher/) remote registries, featuring both a REST API server and a powerful CLI client (`cola-regctl`) for seamless registry management.
 
 ## Features
 
