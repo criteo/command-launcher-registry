@@ -69,7 +69,7 @@ func (a *CustomJWTAuth) Authenticate(r *http.Request) (*User, error) {
 func (a *CustomJWTAuth) Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, err := a.Authenticate(r)
+			_, err := a.Authenticate(r)
 			if err != nil {
 				if errors.Is(err, ErrForbidden) {
 					http.Error(w, "Forbidden", http.StatusForbidden)
@@ -82,8 +82,6 @@ func (a *CustomJWTAuth) Middleware() func(http.Handler) http.Handler {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-
-			_ = user
 
 			next.ServeHTTP(w, r)
 		})
@@ -128,7 +126,7 @@ func (a *CustomJWTAuth) executeScript(token string) ([]string, string, error) {
 		}
 		a.logger.Error("Failed to execute script",
 			"error", err)
-		return nil, "", ErrForbidden
+		return nil, "", ErrInternal
 	}
 
 	groups, username := a.parseOutput(stdout.String())
