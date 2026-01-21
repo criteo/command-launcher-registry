@@ -8,6 +8,7 @@ import (
 var (
 	ErrUnauthorized = errors.New("unauthorized")
 	ErrForbidden    = errors.New("forbidden")
+	ErrInternal     = errors.New("internal error")
 )
 
 // User represents an authenticated user

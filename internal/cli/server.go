@@ -59,11 +59,13 @@ func init() {
 	ServerCmd.Flags().String("host", "", "Bind address")
 	ServerCmd.Flags().String("log-level", "", "Log level (debug|info|warn|error)")
 	ServerCmd.Flags().String("log-format", "", "Log format (json|text)")
-	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap)")
+	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap|custom_jwt)")
 	ServerCmd.Flags().String("auth-ldap-server", "", "LDAP server URL (e.g., ldap://ldap.example.com)")
 	ServerCmd.Flags().Int("auth-ldap-timeout", 30, "LDAP connection timeout (e.g., 30s)")
 	ServerCmd.Flags().String("auth-ldap-bind-dn", "", "LDAP bind DN for service account")
 	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", "LDAP base DN for user searches")
+	ServerCmd.Flags().String("auth-custom-jwt-script", "", "Path to JWT validator script")
+	ServerCmd.Flags().String("auth-custom-jwt-required-group", "", "Required group for authorization")
 
 	// Bind CLI flags to viper
 	v.BindPFlag("storage.uri", ServerCmd.Flags().Lookup("storage-uri"))
@@ -77,6 +79,8 @@ func init() {
 	v.BindPFlag("auth.ldap.timeout", ServerCmd.Flags().Lookup("auth-ldap-timeout"))
 	v.BindPFlag("auth.ldap.bind_dn", ServerCmd.Flags().Lookup("auth-ldap-bind-dn"))
 	v.BindPFlag("auth.ldap.user_base_dn", ServerCmd.Flags().Lookup("auth-ldap-user-base-dn"))
+	v.BindPFlag("auth.custom_jwt.script", ServerCmd.Flags().Lookup("auth-custom-jwt-script"))
+	v.BindPFlag("auth.custom_jwt.required_group", ServerCmd.Flags().Lookup("auth-custom-jwt-required-group"))
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
@@ -143,6 +147,14 @@ func runServer(cmd *cobra.Command, args []string) error {
 		logger.Info("LDAP authentication enabled",
 			"server", cfg.Auth.LDAP.Server,
 			"user_base_dn", cfg.Auth.LDAP.UserBaseDN)
+	case "custom_jwt":
+		authenticator, err = auth.NewCustomJWTAuth(cfg.Auth.CustomJWT, logger)
+		if err != nil {
+			logger.Error("Failed to initialize custom JWT auth",
+				"error", err)
+			os.Exit(ExitCodeStorageInitFailed)
+		}
+		logger.Info("Custom JWT authentication enabled")
 	default:
 		logger.Error("Unsupported auth type", "auth_type", cfg.Auth.Type)
 		os.Exit(ExitCodeInvalidConfig)
