@@ -108,7 +108,7 @@ export COLA_REGISTRY_SESSION_TOKEN=admin:admin
 
 # Publish a version
 ./bin/cola-regctl version create my-tools my-cli 1.0.0 \
-  --checksum "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
+  --checksum "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
   --url "https://downloads.example.com/my-cli-1.0.0.zip" \
   --start-partition 0 \
   --end-partition 9
@@ -175,7 +175,7 @@ curl -X POST http://localhost:8080/api/v1/registry/build/package/hotfix/version 
   -d '{
     "name":"hotfix",
     "version":"1.0.0",
-    "checksum":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "checksum":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "url":"https://example.com/hotfix-1.0.0.zip",
     "startPartition":0,
     "endPartition":9
@@ -540,7 +540,7 @@ cola-regctl package delete <registry> <package>
 ```bash
 # Publish a version
 cola-regctl version create <registry> <package> <version> \
-  --checksum "sha256:abc123..." \
+  --checksum "abc123..." \
   --url "https://downloads.example.com/package-1.0.0.zip" \
   --start-partition 0 \
   --end-partition 9
@@ -589,14 +589,14 @@ cola-regctl package create build-tools deployer \
 
 # Publish version 1.0.0 (for partitions 0-4 = 50% rollout)
 cola-regctl version create build-tools deployer 1.0.0 \
-  --checksum "sha256:abc123..." \
+  --checksum "abc123..." \
   --url "https://cdn.example.com/deployer-1.0.0.tar.gz" \
   --start-partition 0 \
   --end-partition 4
 
 # Publish version 1.1.0 (for partitions 5-9 = 50% rollout)
 cola-regctl version create build-tools deployer 1.1.0 \
-  --checksum "sha256:def456..." \
+  --checksum "def456..." \
   --url "https://cdn.example.com/deployer-1.1.0.tar.gz" \
   --start-partition 5 \
   --end-partition 9

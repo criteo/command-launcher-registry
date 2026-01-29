@@ -74,7 +74,7 @@ echo "Creating version 1.0.0 for deployment-cli..."
 api_call POST "/registry/company-tools/package/deployment-cli/version" '{
   "name": "deployment-cli",
   "version": "1.0.0",
-  "checksum": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "checksum": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "url": "https://downloads.example.com/deployment-cli/1.0.0/deployment-cli",
   "startPartition": 0,
   "endPartition": 4
@@ -85,7 +85,7 @@ echo "Creating version 1.1.0 for deployment-cli..."
 api_call POST "/registry/company-tools/package/deployment-cli/version" '{
   "name": "deployment-cli",
   "version": "1.1.0",
-  "checksum": "sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+  "checksum": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
   "url": "https://downloads.example.com/deployment-cli/1.1.0/deployment-cli",
   "startPartition": 5,
   "endPartition": 9
@@ -110,7 +110,7 @@ echo "Creating version 2.0.0 for data-sync..."
 api_call POST "/registry/company-tools/package/data-sync/version" '{
   "name": "data-sync",
   "version": "2.0.0",
-  "checksum": "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+  "checksum": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
   "url": "https://downloads.example.com/data-sync/2.0.0/data-sync",
   "startPartition": 0,
   "endPartition": 9
@@ -131,7 +131,7 @@ echo "Creating version 3.5.2 for monitoring-agent..."
 api_call POST "/registry/company-tools/package/monitoring-agent/version" '{
   "name": "monitoring-agent",
   "version": "3.5.2",
-  "checksum": "sha256:9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
+  "checksum": "9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
   "url": "https://downloads.example.com/monitoring-agent/3.5.2/monitoring-agent",
   "startPartition": 0,
   "endPartition": 9

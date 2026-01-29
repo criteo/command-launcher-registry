@@ -75,7 +75,7 @@ func TestOCIStorage_Integration(t *testing.T) {
 		ver := &models.Version{
 			Name:           "oci-test-pkg",
 			Version:        "1.0.0",
-			Checksum:       "abc123",
+			Checksum:       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 			URL:            "https://example.com/pkg.zip",
 			StartPartition: 0,
 			EndPartition:   9,

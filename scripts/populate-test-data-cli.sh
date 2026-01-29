@@ -76,7 +76,7 @@ echo
 # Create version 1.0.0 for deployment-cli
 echo "Creating version 1.0.0 for deployment-cli..."
 ${CLI} version create company-tools deployment-cli 1.0.0 \
-    --checksum "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
+    --checksum "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
     --url "https://downloads.example.com/deployment-cli/1.0.0/deployment-cli.zip" \
     --start-partition 0 \
     --end-partition 4
@@ -85,7 +85,7 @@ echo
 # Create version 1.1.0 for deployment-cli
 echo "Creating version 1.1.0 for deployment-cli..."
 ${CLI} version create company-tools deployment-cli 1.1.0 \
-    --checksum "sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210" \
+    --checksum "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210" \
     --url "https://downloads.example.com/deployment-cli/1.1.0/deployment-cli.zip" \
     --start-partition 5 \
     --end-partition 9
@@ -103,7 +103,7 @@ echo
 # Create version 2.0.0 for data-sync
 echo "Creating version 2.0.0 for data-sync..."
 ${CLI} version create company-tools data-sync 2.0.0 \
-    --checksum "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789" \
+    --checksum "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789" \
     --url "https://downloads.example.com/data-sync/2.0.0/data-sync.pkg" \
     --start-partition 0 \
     --end-partition 9
@@ -119,7 +119,7 @@ echo
 # Create version 3.5.2 for monitoring-agent
 echo "Creating version 3.5.2 for monitoring-agent..."
 ${CLI} version create company-tools monitoring-agent 3.5.2 \
-    --checksum "sha256:9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba" \
+    --checksum "9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba" \
     --url "https://downloads.example.com/monitoring-agent/3.5.2/monitoring-agent.pkg" \
     --start-partition 0 \
     --end-partition 9

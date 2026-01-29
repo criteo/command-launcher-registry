@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/criteo/command-launcher-registry/internal/client/errors"
 	"github.com/criteo/command-launcher-registry/internal/client/output"
@@ -65,7 +64,7 @@ func init() {
 	versionCmd.AddCommand(versionDeleteCmd)
 
 	// Create flags
-	versionCreateCmd.Flags().StringVar(&versionChecksum, "checksum", "", "Checksum in format 'sha256:hash' (required)")
+	versionCreateCmd.Flags().StringVar(&versionChecksum, "checksum", "", "SHA256 checksum (64 hex characters) (required)")
 	versionCreateCmd.Flags().StringVar(&versionURL, "url", "", "Download URL (required)")
 	versionCreateCmd.Flags().IntVar(&versionStartPart, "start-partition", 0, "Start partition (0-9)")
 	versionCreateCmd.Flags().IntVar(&versionEndPart, "end-partition", 9, "End partition (0-9)")
@@ -78,18 +77,13 @@ func init() {
 }
 
 func validateChecksum(checksum string) error {
-	if !strings.HasPrefix(checksum, "sha256:") {
-		return fmt.Errorf("checksum must start with 'sha256:'")
+	if len(checksum) != 64 {
+		return fmt.Errorf("checksum must be exactly 64 hexadecimal characters")
 	}
 
-	hash := strings.TrimPrefix(checksum, "sha256:")
-	if len(hash) != 64 {
-		return fmt.Errorf("sha256 hash must be exactly 64 hexadecimal characters")
-	}
-
-	for _, c := range hash {
+	for _, c := range checksum {
 		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return fmt.Errorf("sha256 hash must contain only hexadecimal characters")
+			return fmt.Errorf("checksum must contain only hexadecimal characters")
 		}
 	}
 

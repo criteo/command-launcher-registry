@@ -325,7 +325,7 @@ cola-regctl version push mypackage 1.2.0 \
 cola-regctl version push mypackage 1.2.0 \
     --platform darwin --arch arm64 \
     --artifact ./build/mypackage-darwin-arm64 \
-    --checksum sha256:abc123...
+    --checksum e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
 
 ---
