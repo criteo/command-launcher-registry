@@ -610,9 +610,9 @@ components:
           example: '1.0.0'
         checksum:
           type: string
-          description: SHA256 checksum with prefix
-          pattern: '^sha256:[a-f0-9]{64}$'
-          example: 'sha256:abc123def456...'
+          description: SHA256 checksum (64 hex characters)
+          pattern: '^[a-f0-9]{64}$'
+          example: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
         url:
           type: string
           format: uri
@@ -803,8 +803,8 @@ components:
           example: '1.0.0'
         checksum:
           type: string
-          pattern: '^sha256:[a-f0-9]{64}$'
-          example: 'sha256:abc123def456789...'
+          pattern: '^[a-f0-9]{64}$'
+          example: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
         url:
           type: string
           format: uri
@@ -832,8 +832,8 @@ components:
           example: '1.0.0'
         checksum:
           type: string
-          pattern: '^sha256:[a-f0-9]{64}$'
-          example: 'sha256:abc123def456789...'
+          pattern: '^[a-f0-9]{64}$'
+          example: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
         url:
           type: string
           format: uri

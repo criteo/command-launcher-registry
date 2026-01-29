@@ -5,10 +5,15 @@ import (
 	"strings"
 )
 
-// ValidateChecksum validates checksum format (must start with "sha256:")
+// ValidateChecksum validates checksum format (must be 64 hex characters)
 func ValidateChecksum(checksum string) error {
-	if !strings.HasPrefix(checksum, "sha256:") {
-		return fmt.Errorf("invalid checksum format. Expected 'sha256:hash', got: '%s'", checksum)
+	if len(checksum) != 64 {
+		return fmt.Errorf("invalid checksum format. Expected 64 hexadecimal characters (SHA256), got: '%s'", checksum)
+	}
+	for _, c := range checksum {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return fmt.Errorf("checksum must contain only hexadecimal characters, got: '%s'", checksum)
+		}
 	}
 	return nil
 }

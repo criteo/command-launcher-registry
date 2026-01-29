@@ -267,7 +267,7 @@ export COLA_REGISTRY_SESSION_TOKEN=admin:admin  # If auth enabled
 
 ```bash
 ./bin/cola-regctl version create my-tools deployment-cli 1.0.0 \
-  --checksum "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" \
+  --checksum "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" \
   --url "https://releases.example.com/deployment-cli-1.0.0.tar.gz" \
   --start-partition 0 \
   --end-partition 9
@@ -285,7 +285,7 @@ Output:
   {
     "name": "deployment-cli",
     "version": "1.0.0",
-    "checksum": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "url": "https://releases.example.com/deployment-cli-1.0.0.tar.gz",
     "startPartition": 0,
     "endPartition": 9

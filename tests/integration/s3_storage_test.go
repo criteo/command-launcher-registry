@@ -121,7 +121,7 @@ func TestS3Storage_FullCRUDLifecycle(t *testing.T) {
 	version := &models.Version{
 		Name:           "test-package",
 		Version:        "1.0.0",
-		Checksum:       "sha256:abc123",
+		Checksum:       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		URL:            "https://example.com/test-package-1.0.0.tar.gz",
 		StartPartition: 0,
 		EndPartition:   9,
@@ -134,7 +134,7 @@ func TestS3Storage_FullCRUDLifecycle(t *testing.T) {
 	retrievedVer, err := store.GetVersion(ctx, "test-registry", "test-package", "1.0.0")
 	require.NoError(t, err, "Failed to get version")
 	assert.Equal(t, "1.0.0", retrievedVer.Version)
-	assert.Equal(t, "sha256:abc123", retrievedVer.Checksum)
+	assert.Equal(t, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", retrievedVer.Checksum)
 
 	// Test: List registries
 	registries, err := store.ListRegistries(ctx)

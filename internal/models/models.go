@@ -22,7 +22,7 @@ type Package struct {
 type Version struct {
 	Name           string `json:"name"` // Package name (denormalized for index.json)
 	Version        string `json:"version"`
-	Checksum       string `json:"checksum"`       // SHA256 with "sha256:" prefix
+	Checksum       string `json:"checksum"`       // SHA256 hash (64 hex characters)
 	URL            string `json:"url"`            // Download URL
 	StartPartition int    `json:"startPartition"` // 0-9
 	EndPartition   int    `json:"endPartition"`   // 0-9

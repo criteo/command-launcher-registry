@@ -119,7 +119,7 @@ Registry (Organization/Team Level)
         │
         └── Version (Release Level)
               ├── version: "1.2.0"
-              ├── checksum: "sha256:abc..."
+              ├── checksum: "e3b0c44298fc..."
               ├── url: "https://cdn/deployer-1.2.0.tar.gz"
               ├── startPartition: 0
               └── endPartition: 9
@@ -366,7 +366,7 @@ curl -X POST http://localhost:8080/api/v1/registry -u admin:password \
 curl http://localhost:8080/api/v1/registry/devops-tools/index.json
 ```
 ```json
-[{"name": "deployer", "version": "1.0.0", "checksum": "sha256:...",
+[{"name": "deployer", "version": "1.0.0", "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "url": "https://cdn/deployer-1.0.0.tar.gz", "startPartition": 0, "endPartition": 9}]
 ```
 
@@ -388,7 +388,7 @@ curl -X POST http://localhost:8080/api/v1/registry/devops-tools/package -u admin
 curl -X POST http://localhost:8080/api/v1/registry/devops-tools/package/deployer/version \
   -u admin:password -H "Content-Type: application/json" \
   -d '{"name": "deployer", "version": "1.2.0",
-       "checksum": "sha256:e3b0c44298fc1c149afbf4c8996fb924...",
+       "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
        "url": "https://cdn.company.com/deployer-1.2.0-linux-amd64.tar.gz",
        "startPartition": 0, "endPartition": 9}'
 ```
@@ -524,8 +524,8 @@ Valid:   1.0.0, 2.1.3-alpha, 3.0.0-beta.1+build.123
 
 ### Checksum Format
 ```go
-Pattern: sha256:[64 hex characters]
-Example: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Pattern: [64 hex characters]
+Example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
 
 ### Custom Values

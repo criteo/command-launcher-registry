@@ -14,8 +14,8 @@ var (
 	// Semantic version pattern (simplified - supports major.minor.patch with optional pre-release and build metadata)
 	versionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
-	// Checksum pattern: sha256: followed by 64 hex characters
-	checksumPattern = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+	// Checksum pattern: 64 hex characters (SHA256)
+	checksumPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 	// Custom values key pattern
 	customKeyPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_-]{0,63}$`)
@@ -70,7 +70,7 @@ func ValidateChecksum(checksum string) error {
 		return &ValidationError{Field: "checksum", Message: "checksum is required"}
 	}
 	if !checksumPattern.MatchString(checksum) {
-		return &ValidationError{Field: "checksum", Message: "checksum must match format sha256:[64 hex characters]"}
+		return &ValidationError{Field: "checksum", Message: "checksum must be 64 hexadecimal characters (SHA256)"}
 	}
 	return nil
 }
