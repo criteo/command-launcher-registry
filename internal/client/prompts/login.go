@@ -69,16 +69,16 @@ func PromptAuthMethod() (AuthMethod, error) {
 	}
 }
 
-// PromptJWTToken prompts for JWT token input (visible input)
+// PromptJWTToken prompts for JWT token input (hidden input like password)
 func PromptJWTToken() (string, error) {
 	fmt.Print("JWT Token: ")
-	reader := bufio.NewReader(os.Stdin)
-	token, err := reader.ReadString('\n')
+	tokenBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println() // Print newline after hidden input
 	if err != nil {
 		return "", fmt.Errorf("failed to read JWT token: %w", err)
 	}
 
-	token = strings.TrimSpace(token)
+	token := strings.TrimSpace(string(tokenBytes))
 	if token == "" {
 		return "", fmt.Errorf("JWT token cannot be empty")
 	}

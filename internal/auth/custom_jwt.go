@@ -60,9 +60,10 @@ func (a *CustomJWTAuth) Authenticate(r *http.Request) (*User, error) {
 
 	a.logger.Debug("CustomJWT authentication successful",
 		"username", username,
+		"groups_count", len(groups),
 		"source_ip", r.RemoteAddr)
 
-	return &User{Username: username}, nil
+	return &User{Username: username, Groups: groups}, nil
 }
 
 // Middleware returns HTTP middleware for CustomJWT authentication
@@ -130,24 +131,28 @@ func (a *CustomJWTAuth) executeScript(token string) ([]string, string, error) {
 	}
 
 	groups, username := a.parseOutput(stdout.String())
+	if username == "" {
+		a.logger.Warn("Script returned empty username")
+		return nil, "", ErrForbidden
+	}
 	return groups, username, nil
 }
 
-// parseOutput parses the script output to extract groups and optionally username
-// Expected format: one group per line, optionally with "username:value" on first line
+// parseOutput parses the script output to extract username and groups
+// Expected format: "username:<value>" on first line, then one group per line
 func (a *CustomJWTAuth) parseOutput(output string) ([]string, string) {
 	var groups []string
-	username := "jwt-user"
+	var username string
 
 	lines := strings.Split(output, "\n")
-	for i, line := range lines {
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 
-		// First non-empty line might be username
-		if i == 0 && strings.HasPrefix(line, "username:") {
+		// First line with username: prefix sets the username
+		if username == "" && strings.HasPrefix(line, "username:") {
 			username = strings.TrimSpace(strings.TrimPrefix(line, "username:"))
 			continue
 		}
