@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/criteo/command-launcher-registry/internal/client/auth"
 )
 
 // Client wraps HTTP client for registry API calls
@@ -53,9 +55,16 @@ func (c *Client) doRequest(method, path string, body interface{}) (*http.Respons
 	}
 	req.Header.Set("Accept", "application/json")
 
-	// Add Basic Auth if token is provided
+	// Add authentication header if token is provided
 	if c.Token != "" {
-		req.Header.Set("Authorization", "Basic "+c.Token)
+		// Detect token type and use appropriate authentication scheme
+		if auth.IsJWTToken(c.Token) {
+			// JWT token (three dot-separated base64url parts) - use Bearer authentication
+			req.Header.Set("Authorization", "Bearer "+c.Token)
+		} else {
+			// Basic auth credential (already base64-encoded by caller) - use Basic authentication
+			req.Header.Set("Authorization", "Basic "+c.Token)
+		}
 	}
 
 	// Execute request

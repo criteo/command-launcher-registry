@@ -61,7 +61,7 @@ func versionTemplate() string {
 func init() {
 	// Global flags available to all commands
 	rootCmd.PersistentFlags().StringVar(&flagURL, "url", "", "Server URL (or use COLA_REGISTRY_URL env var)")
-	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token in 'user:password' format (or use COLA_REGISTRY_SESSION_TOKEN env var)")
+	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token: 'user:password' for basic auth or JWT token (or use COLA_REGISTRY_TOKEN env var)")
 	rootCmd.PersistentFlags().BoolVar(&flagJSON, "json", false, "Output in JSON format")
 	rootCmd.PersistentFlags().BoolVar(&flagVerbose, "verbose", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().DurationVar(&flagTimeout, "timeout", 30*time.Second, "HTTP request timeout")

@@ -25,7 +25,7 @@ CREDENTIALS="${2:-admin:admin}"
 
 # Set environment variables for CLI authentication
 export COLA_REGISTRY_URL="${SERVER_URL}"
-export COLA_REGISTRY_SESSION_TOKEN="${CREDENTIALS}"
+export COLA_REGISTRY_TOKEN="${CREDENTIALS}"
 
 # Find cola-regctl binary
 if command -v cola-regctl &> /dev/null; then
