@@ -131,7 +131,7 @@ cola-regctl login --url https://registry.example.com \
 
 # Using environment variables
 export COLA_REGISTRY_URL=https://registry.example.com
-export COLA_REGISTRY_SESSION_TOKEN=admin:password
+export COLA_REGISTRY_TOKEN=admin:password
 cola-regctl login
 ```
 
@@ -396,7 +396,7 @@ Available for all commands:
 | `COLA_REGISTRY_URL` | Default registry URL | `https://registry.example.com` |
 | `COLA_REGISTRY_USER` | Username for auth | `admin` |
 | `COLA_REGISTRY_PASSWORD` | Password for auth | `secret` |
-| `COLA_REGISTRY_SESSION_TOKEN` | Session token (user:pass) | `admin:secret` |
+| `COLA_REGISTRY_TOKEN` | Authentication token (user:pass or JWT) | `admin:secret` or `eyJhbGc...` |
 | `COLA_CONFIG_DIR` | Config directory | `~/.cola` |
 
 ### Priority Order
@@ -466,7 +466,7 @@ fi
 - name: Push to Registry
   env:
     COLA_REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
-    COLA_REGISTRY_SESSION_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+    COLA_REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
   run: |
     cola-regctl version push mypackage ${{ github.ref_name }} \
       --platform linux --arch amd64 \

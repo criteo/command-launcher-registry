@@ -242,7 +242,11 @@ Once the server is running, use the CLI client to manage registries.
 ```bash
 # Set server URL and credentials
 export COLA_REGISTRY_URL=http://localhost:8080
-export COLA_REGISTRY_SESSION_TOKEN=admin:admin  # If auth enabled
+
+# If authentication is enabled:
+export COLA_REGISTRY_TOKEN=admin:admin  # Basic auth (username:password)
+# or
+export COLA_REGISTRY_TOKEN=eyJhbGciOiJIUz...  # JWT token
 ```
 
 ### Create a Registry

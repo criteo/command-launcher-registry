@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -102,12 +101,10 @@ func getAuthenticatedClient() *client.Client {
 		errors.ExitWithError(err, "failed to resolve authentication token")
 	}
 
+	// Prepare token for client (JWT as-is, basic auth base64-encoded)
 	// Send credentials to server if available; server determines if authentication is required
-	var encodedToken string
-	if token != "" {
-		encodedToken = base64.StdEncoding.EncodeToString([]byte(token))
-	}
-	return client.NewClient(serverURL, encodedToken, flagTimeout, flagVerbose)
+	clientToken := auth.EncodeToken(token)
+	return client.NewClient(serverURL, clientToken, flagTimeout, flagVerbose)
 }
 
 func runRegistryCreate(cmd *cobra.Command, args []string) {

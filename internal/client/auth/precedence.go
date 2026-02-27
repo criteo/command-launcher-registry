@@ -7,16 +7,16 @@ import (
 
 const (
 	// TokenEnvVar is the environment variable for authentication token
-	TokenEnvVar = "COLA_REGISTRY_SESSION_TOKEN"
+	TokenEnvVar = "COLA_REGISTRY_TOKEN"
 )
 
 // ResolveToken resolves the authentication token using precedence:
-// 1. flagToken (--token flag)
-// 2. Environment variable (COLA_REGISTRY_SESSION_TOKEN)
+// 1. flagToken (--token flag, if provided)
+// 2. COLA_REGISTRY_TOKEN environment variable
 // 3. Stored credentials
 // Returns empty string if no token found
 func ResolveToken(flagToken string) (string, error) {
-	// Priority 1: CLI flag
+	// Priority 1: CLI flag (highest priority for explicit override)
 	if flagToken != "" {
 		return flagToken, nil
 	}

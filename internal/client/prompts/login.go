@@ -30,3 +30,58 @@ func PromptPassword() (string, error) {
 	}
 	return string(password), nil
 }
+
+// AuthMethod represents the authentication method chosen by the user
+type AuthMethod int
+
+const (
+	AuthMethodUsernamePassword AuthMethod = 1
+	AuthMethodJWT              AuthMethod = 2
+)
+
+// PromptAuthMethod prompts the user to choose an authentication method
+func PromptAuthMethod() (AuthMethod, error) {
+	fmt.Println("How would you like to authenticate?")
+	fmt.Println("  1. Username and password")
+	fmt.Println("  2. JWT token")
+	fmt.Print("Choice [1]: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	choice, err := reader.ReadString('\n')
+	if err != nil {
+		return 0, fmt.Errorf("failed to read choice: %w", err)
+	}
+
+	choice = strings.TrimSpace(choice)
+
+	// Default to username/password if empty
+	if choice == "" {
+		return AuthMethodUsernamePassword, nil
+	}
+
+	switch choice {
+	case "1":
+		return AuthMethodUsernamePassword, nil
+	case "2":
+		return AuthMethodJWT, nil
+	default:
+		return 0, fmt.Errorf("invalid choice: %s (must be 1 or 2)", choice)
+	}
+}
+
+// PromptJWTToken prompts for JWT token input (hidden input like password)
+func PromptJWTToken() (string, error) {
+	fmt.Print("JWT Token: ")
+	tokenBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println() // Print newline after hidden input
+	if err != nil {
+		return "", fmt.Errorf("failed to read JWT token: %w", err)
+	}
+
+	token := strings.TrimSpace(string(tokenBytes))
+	if token == "" {
+		return "", fmt.Errorf("JWT token cannot be empty")
+	}
+
+	return token, nil
+}

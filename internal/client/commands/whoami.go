@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,7 +21,7 @@ var whoamiCmd = &cobra.Command{
 
 Resolves server URL and credentials using normal precedence:
 - URL: --url flag > COLA_REGISTRY_URL env var > stored URL
-- Token: --token flag > COLA_REGISTRY_SESSION_TOKEN env var > stored token`,
+- Token: --token flag > COLA_REGISTRY_TOKEN env var > stored token`,
 	Args: cobra.NoArgs,
 	Run:  runWhoami,
 }
@@ -41,12 +40,10 @@ func runWhoami(cmd *cobra.Command, args []string) {
 	}
 
 	// Check authentication by calling /api/v1/whoami
-	encodedToken := ""
-	if token != "" {
-		encodedToken = base64.StdEncoding.EncodeToString([]byte(token))
-	}
+	// Prepare token for client (JWT as-is, basic auth base64-encoded)
+	clientToken := auth.EncodeToken(token)
 
-	c := client.NewClient(serverURL, encodedToken, flagTimeout, flagVerbose)
+	c := client.NewClient(serverURL, clientToken, flagTimeout, flagVerbose)
 	resp, err := c.Get("/api/v1/whoami")
 	if err != nil {
 		errors.ExitWithError(err, "failed to connect to server")
@@ -54,20 +51,17 @@ func runWhoami(cmd *cobra.Command, args []string) {
 	defer resp.Body.Close()
 
 	authenticated := resp.StatusCode == http.StatusOK
-	var username string
+	username := "(username unknown)"
 
 	// Extract username from server response
-	if resp.StatusCode == http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		var whoamiResp map[string]interface{}
-		if json.Unmarshal(body, &whoamiResp) == nil {
-			if user, ok := whoamiResp["username"].(string); ok {
-				username = user
+	if authenticated {
+		if body, err := io.ReadAll(resp.Body); err == nil {
+			var whoamiResp map[string]any
+			if json.Unmarshal(body, &whoamiResp) == nil {
+				if user, ok := whoamiResp["username"].(string); ok && user != "" {
+					username = user
+				}
 			}
-		}
-		// If username is still empty, set a fallback message
-		if username == "" {
-			username = "(username unknown)"
 		}
 	}
 

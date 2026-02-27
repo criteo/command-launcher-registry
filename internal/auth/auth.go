@@ -14,6 +14,7 @@ var (
 // User represents an authenticated user
 type User struct {
 	Username string
+	Groups   []string
 }
 
 // Authenticator defines the authentication interface

@@ -24,7 +24,8 @@ func NewWhoamiHandler(authenticator auth.Authenticator, logger *slog.Logger) *Wh
 
 // WhoamiResponse represents the whoami response
 type WhoamiResponse struct {
-	Username string `json:"username"`
+	Username string   `json:"username"`
+	Groups   []string `json:"groups,omitempty"`
 }
 
 // GetWhoami handles GET /api/v1/whoami
@@ -39,9 +40,10 @@ func (h *WhoamiHandler) GetWhoami(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return the authenticated username
+	// Return the authenticated user info
 	response := WhoamiResponse{
 		Username: user.Username,
+		Groups:   user.Groups,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

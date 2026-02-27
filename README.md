@@ -16,7 +16,8 @@ A complete solution for hosting and managing [Command Launcher](https://criteo.g
 ### CLI Client (`cola-regctl`)
 - **Full CRUD Operations**: Manage registries, packages, and versions from the command line
 - **Secure Credential Storage**: OS-native keychains (macOS Keychain, Windows Credential Manager, Linux protected files)
-- **Environment Variable Support**: `COLA_REGISTRY_URL` and `COLA_REGISTRY_SESSION_TOKEN`
+- **Multiple Authentication Methods**: Username/password (Basic Auth) or JWT token (Bearer Auth)
+- **Environment Variable Support**: `COLA_REGISTRY_URL` and `COLA_REGISTRY_TOKEN`
 - **Multiple Output Formats**: Human-readable tables and machine-parseable JSON
 - **Interactive Workflows**: Password prompts and deletion confirmations
 - **Cross-Platform**: Works on macOS, Linux, and Windows
@@ -93,7 +94,7 @@ Server starts at `http://localhost:8080` by default.
 ```bash
 # Set server URL and credentials via environment variables
 export COLA_REGISTRY_URL=http://localhost:8080
-export COLA_REGISTRY_SESSION_TOKEN=admin:admin
+export COLA_REGISTRY_TOKEN=admin:admin  # or use JWT token
 
 # Create a registry
 ./bin/cola-regctl registry create my-tools --description "My tools registry"
@@ -141,7 +142,7 @@ Using CLI client:
 
 # Verify data using CLI
 export COLA_REGISTRY_URL=http://localhost:8080
-export COLA_REGISTRY_SESSION_TOKEN=admin:admin
+export COLA_REGISTRY_TOKEN=admin:admin
 ./bin/cola-regctl registry list
 ./bin/cola-regctl package list company-tools
 ./bin/cola-regctl version list company-tools deployment-cli
@@ -439,19 +440,31 @@ sudo cp bin/cola-regctl /usr/local/bin/
 
 ### Authentication
 
-The CLI supports multiple authentication methods with the following precedence:
+The CLI supports two authentication methods:
+- **Username and password** (Basic Authentication)
+- **JWT token** (Bearer Authentication)
 
-1. `--token` flag (highest priority)
-2. `COLA_REGISTRY_SESSION_TOKEN` environment variable
-3. Stored credentials from `login` command (lowest priority)
+Credential precedence (highest to lowest):
+1. `--token` flag
+2. `COLA_REGISTRY_TOKEN` environment variable
+3. Stored credentials from `login` command
 
 #### Interactive Login
 
 ```bash
 # Login interactively (stores credentials securely)
 ./bin/cola-regctl login http://localhost:8080
+
+# Choose authentication method:
+# 1. Username and password
+# 2. JWT token
+
+# Option 1: Username/password
 # Enter username: admin
 # Enter password: ****
+
+# Option 2: JWT token
+# Enter JWT token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Check authentication status
 ./bin/cola-regctl whoami
@@ -465,7 +478,12 @@ The CLI supports multiple authentication methods with the following precedence:
 ```bash
 # Set once, use everywhere
 export COLA_REGISTRY_URL=http://localhost:8080
-export COLA_REGISTRY_SESSION_TOKEN=admin:admin
+
+# Option 1: Basic authentication (username:password)
+export COLA_REGISTRY_TOKEN=admin:admin
+
+# Option 2: JWT token authentication
+export COLA_REGISTRY_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0...
 
 # Now all commands use these credentials automatically
 ./bin/cola-regctl registry list
@@ -475,8 +493,11 @@ export COLA_REGISTRY_SESSION_TOKEN=admin:admin
 #### Per-Command Authentication
 
 ```bash
-# Override with flags
+# Override with flags (basic auth)
 ./bin/cola-regctl --url http://localhost:8080 --token admin:admin registry list
+
+# Override with flags (JWT token)
+./bin/cola-regctl --url http://localhost:8080 --token eyJhbGciOiJIUz... registry list
 ```
 
 ### Command Reference
@@ -561,7 +582,7 @@ cola-regctl version delete <registry> <package> <version>
 All commands support these global flags:
 
 - `--url <url>` - Server URL (or use `COLA_REGISTRY_URL` env var)
-- `--token <user:pass>` - Authentication token (or use `COLA_REGISTRY_SESSION_TOKEN` env var)
+- `--token <token>` - Authentication token: `user:pass` for basic auth or JWT token for bearer auth (or use `COLA_REGISTRY_TOKEN` env var)
 - `--json` - Output in JSON format (for scripting)
 - `--verbose` - Enable verbose logging
 - `--timeout <duration>` - HTTP request timeout (default: 30s)
@@ -574,7 +595,7 @@ All commands support these global flags:
 ```bash
 # Set up environment
 export COLA_REGISTRY_URL=http://localhost:8080
-export COLA_REGISTRY_SESSION_TOKEN=admin:admin
+export COLA_REGISTRY_TOKEN=admin:admin
 
 # Create a complete registry
 cola-regctl registry create build-tools \
