@@ -81,12 +81,12 @@ api_call POST "/registry/company-tools/package/deployment-cli/version" '{
 }' | jq '.'
 echo
 
-echo "Creating version 1.1.0 for deployment-cli..."
+echo "Creating version 1.1 for deployment-cli (major.minor format)..."
 api_call POST "/registry/company-tools/package/deployment-cli/version" '{
   "name": "deployment-cli",
-  "version": "1.1.0",
+  "version": "1.1",
   "checksum": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
-  "url": "https://downloads.example.com/deployment-cli/1.1.0/deployment-cli",
+  "url": "https://downloads.example.com/deployment-cli/1.1/deployment-cli",
   "startPartition": 5,
   "endPartition": 9
 }' | jq '.'
@@ -105,13 +105,13 @@ api_call POST "/registry/company-tools/package" '{
 }' | jq '.'
 echo
 
-# Create version for data-sync
-echo "Creating version 2.0.0 for data-sync..."
+# Create version for data-sync (major-only format)
+echo "Creating version 2 for data-sync (major-only format)..."
 api_call POST "/registry/company-tools/package/data-sync/version" '{
   "name": "data-sync",
-  "version": "2.0.0",
+  "version": "2",
   "checksum": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-  "url": "https://downloads.example.com/data-sync/2.0.0/data-sync",
+  "url": "https://downloads.example.com/data-sync/2/data-sync",
   "startPartition": 0,
   "endPartition": 9
 }' | jq '.'

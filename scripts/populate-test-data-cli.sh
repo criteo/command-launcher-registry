@@ -82,11 +82,11 @@ ${CLI} version create company-tools deployment-cli 1.0.0 \
     --end-partition 4
 echo
 
-# Create version 1.1.0 for deployment-cli
-echo "Creating version 1.1.0 for deployment-cli..."
-${CLI} version create company-tools deployment-cli 1.1.0 \
+# Create version 1.1 for deployment-cli (major.minor format)
+echo "Creating version 1.1 for deployment-cli (major.minor format)..."
+${CLI} version create company-tools deployment-cli 1.1 \
     --checksum "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210" \
-    --url "https://downloads.example.com/deployment-cli/1.1.0/deployment-cli.zip" \
+    --url "https://downloads.example.com/deployment-cli/1.1/deployment-cli.zip" \
     --start-partition 5 \
     --end-partition 9
 echo
@@ -100,11 +100,11 @@ ${CLI} package create company-tools data-sync \
     --custom-value "repo=https://github.com/company/data-sync"
 echo
 
-# Create version 2.0.0 for data-sync
-echo "Creating version 2.0.0 for data-sync..."
-${CLI} version create company-tools data-sync 2.0.0 \
+# Create version 2 for data-sync (major-only format)
+echo "Creating version 2 for data-sync (major-only format)..."
+${CLI} version create company-tools data-sync 2 \
     --checksum "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789" \
-    --url "https://downloads.example.com/data-sync/2.0.0/data-sync.pkg" \
+    --url "https://downloads.example.com/data-sync/2/data-sync.pkg" \
     --start-partition 0 \
     --end-partition 9
 echo
