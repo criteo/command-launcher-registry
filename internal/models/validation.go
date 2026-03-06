@@ -11,8 +11,8 @@ var (
 	// Name pattern: 1-64 characters, alphanumeric with hyphens/underscores
 	namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
-	// Semantic version pattern (simplified - supports major.minor.patch with optional pre-release and build metadata)
-	versionPattern = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+	// Version pattern: supports major[.minor[.patch]] with optional pre-release and build metadata
+	versionPattern = regexp.MustCompile(`^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 	// Checksum pattern: 64 hex characters (SHA256)
 	checksumPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
@@ -59,7 +59,7 @@ func ValidateVersion(version string) error {
 		return &ValidationError{Field: "version", Message: "version is required"}
 	}
 	if !versionPattern.MatchString(version) {
-		return &ValidationError{Field: "version", Message: "version must be valid semantic version (e.g., 1.0.0, 2.1.3-alpha)"}
+		return &ValidationError{Field: "version", Message: "version must be a valid version (e.g., 1, 1.2, 1.0.0, 2.1.3-alpha)"}
 	}
 	return nil
 }
