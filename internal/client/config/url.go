@@ -5,12 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/criteo/command-launcher-registry/internal/branding"
 	"github.com/criteo/command-launcher-registry/internal/client/auth"
-)
-
-const (
-	// URLEnvVar is the environment variable for server URL
-	URLEnvVar = "COLA_REGISTRY_URL"
 )
 
 // ResolveURL resolves the server URL using precedence:
@@ -25,14 +21,14 @@ func ResolveURL(flagURL string) (string, error) {
 	}
 
 	// Priority 2: Environment variable
-	if envURL := os.Getenv(URLEnvVar); envURL != "" {
+	if envURL := os.Getenv(branding.URLEnvVar()); envURL != "" {
 		return NormalizeURL(envURL), nil
 	}
 
 	// Priority 3: Stored URL
 	storedURL, err := auth.LoadStoredURL()
 	if err != nil {
-		return "", fmt.Errorf("no server URL configured. Use --url flag, %s env var, or run 'login' command", URLEnvVar)
+		return "", fmt.Errorf("no server URL configured. Use --url flag, %s env var, or run 'login' command", branding.URLEnvVar())
 	}
 
 	return NormalizeURL(storedURL), nil

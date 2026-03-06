@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/criteo/command-launcher-registry/internal/branding"
 	"github.com/criteo/command-launcher-registry/internal/client"
 	"github.com/criteo/command-launcher-registry/internal/client/auth"
 	"github.com/criteo/command-launcher-registry/internal/client/config"
@@ -20,7 +21,7 @@ var loginCmd = &cobra.Command{
 	Short: "Authenticate with a registry server",
 	Long: `Authenticate with a registry server and store credentials securely.
 
-Server URL can be provided as an argument or via COLA_REGISTRY_URL environment variable.
+Server URL can be provided as an argument or via the URL environment variable.
 If both are provided, the argument takes precedence.
 
 Authentication methods:
@@ -49,7 +50,7 @@ func runLogin(cmd *cobra.Command, args []string) {
 		var err error
 		serverURL, err = config.ResolveURL("")
 		if err != nil {
-			errors.ExitWithCode(errors.ExitInvalidArguments, "no server URL specified. Provide server URL as argument or set COLA_REGISTRY_URL environment variable")
+			errors.ExitWithCode(errors.ExitInvalidArguments, fmt.Sprintf("no server URL specified. Provide server URL as argument or set %s environment variable", branding.URLEnvVar()))
 		}
 	}
 

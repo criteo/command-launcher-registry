@@ -10,14 +10,13 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/criteo/command-launcher-registry/internal/branding"
 )
 
 var ErrNotFound = errors.New("credentials not found")
 
-const (
-	configDir  = ".config/cola-registry"
-	configFile = "credentials.yaml"
-)
+const configFile = "credentials.yaml"
 
 // Credentials represents the stored credentials
 type Credentials struct {
@@ -31,7 +30,7 @@ func getConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	return filepath.Join(home, configDir, configFile), nil
+	return filepath.Join(home, branding.ConfigDir(), configFile), nil
 }
 
 // LoadCredentials loads credentials from the file
