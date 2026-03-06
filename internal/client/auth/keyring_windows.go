@@ -11,15 +11,13 @@ import (
 
 	"github.com/zalando/go-keyring"
 	"gopkg.in/yaml.v3"
+
+	"github.com/criteo/command-launcher-registry/internal/branding"
 )
 
 var ErrNotFound = errors.New("credentials not found")
 
-const (
-	credManagerService = "cola-registry"
-	configDir          = ".config/cola-registry"
-	configFile         = "credentials.yaml"
-)
+const configFile = "credentials.yaml"
 
 // ConfigFile represents the URL-only config file on macOS/Windows
 type ConfigFile struct {
@@ -32,7 +30,7 @@ func getConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	return filepath.Join(home, configDir, configFile), nil
+	return filepath.Join(home, branding.ConfigDir(), configFile), nil
 }
 
 // LoadStoredToken loads the token from Windows Credential Manager
@@ -44,7 +42,7 @@ func LoadStoredToken() (string, error) {
 	}
 
 	// Get token from Credential Manager
-	token, err := keyring.Get(credManagerService, url)
+	token, err := keyring.Get(branding.KeychainService(), url)
 	if err != nil {
 		if err == keyring.ErrNotFound {
 			return "", ErrNotFound
@@ -107,7 +105,7 @@ func SaveCredentials(url, token string) error {
 	}
 
 	// Save token to Credential Manager
-	if err := keyring.Set(credManagerService, url, token); err != nil {
+	if err := keyring.Set(branding.KeychainService(), url, token); err != nil {
 		return fmt.Errorf("failed to save token to Credential Manager: %w", err)
 	}
 
@@ -121,7 +119,7 @@ func DeleteCredentials() error {
 
 	// Delete token from Credential Manager if URL was found
 	if urlErr == nil {
-		if err := keyring.Delete(credManagerService, url); err != nil && err != keyring.ErrNotFound {
+		if err := keyring.Delete(branding.KeychainService(), url); err != nil && err != keyring.ErrNotFound {
 			return fmt.Errorf("failed to delete token from Credential Manager: %w", err)
 		}
 	}

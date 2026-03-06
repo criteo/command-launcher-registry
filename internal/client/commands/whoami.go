@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/criteo/command-launcher-registry/internal/branding"
 	"github.com/criteo/command-launcher-registry/internal/client"
 	"github.com/criteo/command-launcher-registry/internal/client/auth"
 	"github.com/criteo/command-launcher-registry/internal/client/config"
@@ -20,8 +21,8 @@ var whoamiCmd = &cobra.Command{
 	Long: `Check authentication status by calling the server's /api/v1/whoami endpoint.
 
 Resolves server URL and credentials using normal precedence:
-- URL: --url flag > COLA_REGISTRY_URL env var > stored URL
-- Token: --token flag > COLA_REGISTRY_TOKEN env var > stored token`,
+- URL: --url flag > URL env var > stored URL
+- Token: --token flag > token env var > stored token`,
 	Args: cobra.NoArgs,
 	Run:  runWhoami,
 }
@@ -76,7 +77,7 @@ func runWhoami(cmd *cobra.Command, args []string) {
 			output.PrintSuccess(fmt.Sprintf("Authenticated to %s as %s", serverURL, username))
 		} else if resp.StatusCode == http.StatusUnauthorized {
 			output.PrintError(fmt.Sprintf("Not authenticated to %s", serverURL))
-			fmt.Println("Run 'cola-regctl login' to authenticate")
+			fmt.Printf("Run '%s login' to authenticate\n", branding.AppName())
 		} else {
 			output.PrintError(fmt.Sprintf("Server returned status %d", resp.StatusCode))
 		}

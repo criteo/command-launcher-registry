@@ -1,8 +1,13 @@
-.PHONY: build build-cli build-all clean test test-cli run fmt lint install-cli help
+.PHONY: build build-cli build-all build-all-prefixes clean test test-cli run fmt lint install-cli help
 
-# Build variables
-BINARY_NAME=cola-registry
-CLI_BINARY_NAME=cola-regctl
+# Prefix variable - controls binary names and appName ldflags
+# Default: cola (produces cola-registry, cola-regctl)
+# Override: make build-all PREFIX=cdt (produces cdt-registry, cdt-regctl)
+PREFIX ?= cola
+
+# Build variables - derived from PREFIX
+BINARY_NAME=$(PREFIX)-registry
+CLI_BINARY_NAME=$(PREFIX)-regctl
 BUILD_DIR=bin
 DIST_DIR=dist
 CMD_DIR=cmd/cola-registry
@@ -11,9 +16,9 @@ CLI_CMD_DIR=cmd/cola-regctl
 # Version variables - can be overridden via environment or command line
 VERSION ?= dev
 BUILD_NUM ?= $(shell date +%Y%m%d-%H%M%S)
-APP_NAME_SERVER = cola-registry
+APP_NAME_SERVER = $(PREFIX)-registry
 APP_LONG_NAME_SERVER = Command Launcher Registry Server
-APP_NAME_CLI = cola-regctl
+APP_NAME_CLI = $(PREFIX)-regctl
 APP_LONG_NAME_CLI = Command Launcher Registry CLI
 
 # Build flags
@@ -46,6 +51,11 @@ build-cli:
 
 ## build-all: Build both server and CLI binaries
 build-all: build build-cli
+
+## build-all-prefixes: Build both cola- and cdt- prefixed binaries
+build-all-prefixes:
+	@$(MAKE) build-all PREFIX=cola
+	@$(MAKE) build-all PREFIX=cdt
 
 ## clean: Remove build artifacts
 clean:
@@ -100,7 +110,7 @@ install-cli: build-cli
 
 ## help: Show this help message
 help:
-	@echo "Usage: make [target]"
+	@echo "Usage: make [target] [PREFIX=cola|cdt]"
 	@echo ""
 	@echo "Targets:"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'

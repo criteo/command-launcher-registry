@@ -3,6 +3,8 @@ package auth
 import (
 	"os"
 	"testing"
+
+	"github.com/criteo/command-launcher-registry/internal/branding"
 )
 
 func TestResolveToken_FlagPriority(t *testing.T) {
@@ -10,8 +12,8 @@ func TestResolveToken_FlagPriority(t *testing.T) {
 	flagToken := "flag-token"
 
 	// Set env vars that should be ignored when flag is set
-	os.Setenv(TokenEnvVar, "env-token")
-	defer os.Unsetenv(TokenEnvVar)
+	os.Setenv(branding.TokenEnvVar(), "env-token")
+	defer os.Unsetenv(branding.TokenEnvVar())
 
 	token, err := ResolveToken(flagToken)
 	if err != nil {
@@ -24,10 +26,10 @@ func TestResolveToken_FlagPriority(t *testing.T) {
 }
 
 func TestResolveToken_NewEnvVar(t *testing.T) {
-	// COLA_REGISTRY_TOKEN should be used when flag is empty
+	// Token env var should be used when flag is empty
 	expectedToken := "jwt-token-from-env"
-	os.Setenv(TokenEnvVar, expectedToken)
-	defer os.Unsetenv(TokenEnvVar)
+	os.Setenv(branding.TokenEnvVar(), expectedToken)
+	defer os.Unsetenv(branding.TokenEnvVar())
 
 	token, err := ResolveToken("")
 	if err != nil {
@@ -35,15 +37,15 @@ func TestResolveToken_NewEnvVar(t *testing.T) {
 	}
 
 	if token != expectedToken {
-		t.Errorf("ResolveToken with COLA_REGISTRY_TOKEN = %q, expected %q", token, expectedToken)
+		t.Errorf("ResolveToken with %s = %q, expected %q", branding.TokenEnvVar(), token, expectedToken)
 	}
 }
 
 func TestResolveToken_EmptyFlag(t *testing.T) {
 	// Empty flag should not take precedence, should fall through to env var
 	expectedToken := "env-token"
-	os.Setenv(TokenEnvVar, expectedToken)
-	defer os.Unsetenv(TokenEnvVar)
+	os.Setenv(branding.TokenEnvVar(), expectedToken)
+	defer os.Unsetenv(branding.TokenEnvVar())
 
 	token, err := ResolveToken("")
 	if err != nil {
@@ -57,7 +59,7 @@ func TestResolveToken_EmptyFlag(t *testing.T) {
 
 func TestResolveToken_NoFlagOrEnv(t *testing.T) {
 	// When flag and env var are not set, should fall through to stored credentials (or empty if none)
-	os.Unsetenv(TokenEnvVar)
+	os.Unsetenv(branding.TokenEnvVar())
 
 	token, err := ResolveToken("")
 	if err != nil {
@@ -72,8 +74,8 @@ func TestResolveToken_NoFlagOrEnv(t *testing.T) {
 }
 
 func TestEnvironmentVariableNames(t *testing.T) {
-	// Verify the environment variable constant is correct
-	if TokenEnvVar != "COLA_REGISTRY_TOKEN" {
-		t.Errorf("TokenEnvVar = %q, expected COLA_REGISTRY_TOKEN", TokenEnvVar)
+	// Verify the default environment variable name is correct
+	if branding.TokenEnvVar() != "COLA_REGISTRY_TOKEN" {
+		t.Errorf("branding.TokenEnvVar() = %q, expected COLA_REGISTRY_TOKEN", branding.TokenEnvVar())
 	}
 }
