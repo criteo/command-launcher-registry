@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+
+	"github.com/criteo/command-launcher-registry/internal/branding"
 )
 
 var (
@@ -24,7 +26,7 @@ func NewStorage(uri *StorageURI, token string, logger *slog.Logger) (Store, erro
 	case "oci":
 		// Token is required for OCI storage
 		if token == "" {
-			return nil, fmt.Errorf("%w: OCI storage requires authentication token (--storage-token or COLA_REGISTRY_STORAGE_TOKEN)", ErrTokenRequired)
+			return nil, fmt.Errorf("%w: OCI storage requires authentication token (--storage-token or %s)", ErrTokenRequired, branding.EnvVar("STORAGE_TOKEN"))
 		}
 		return NewOCIStorage(uri, token, logger)
 

@@ -19,7 +19,7 @@ COPY . .
 # Build the server binary with branding from PREFIX
 # The binary is always named registry-server inside the container
 RUN CGO_ENABLED=0 GOOS=linux go build \
-  -ldflags="-s -w -X 'main.appName=${PREFIX}-registry' -X 'main.appLongName=Command Launcher Registry Server'" \
+  -ldflags="-s -w -X 'main.appName=${PREFIX}-registry'" \
   -o /registry-server ./cmd/cola-registry
 
 # Runtime stage

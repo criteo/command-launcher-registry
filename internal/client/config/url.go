@@ -11,7 +11,7 @@ import (
 
 // ResolveURL resolves the server URL using precedence:
 // 1. flagURL (--url flag)
-// 2. Environment variable (COLA_REGISTRY_URL)
+// 2. Environment variable (e.g., COLA_REGISTRY_URL, derived from branding)
 // 3. Stored URL from credentials file
 // Returns error if no URL found
 func ResolveURL(flagURL string) (string, error) {

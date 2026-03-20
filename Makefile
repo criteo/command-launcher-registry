@@ -17,22 +17,18 @@ CLI_CMD_DIR=cmd/cola-regctl
 VERSION ?= dev
 BUILD_NUM ?= $(shell date +%Y%m%d-%H%M%S)
 APP_NAME_SERVER = $(PREFIX)-registry
-APP_LONG_NAME_SERVER = Command Launcher Registry Server
 APP_NAME_CLI = $(PREFIX)-regctl
-APP_LONG_NAME_CLI = Command Launcher Registry CLI
 
 # Build flags
 LDFLAGS_BASE = -s -w
 LDFLAGS_SERVER = $(LDFLAGS_BASE) \
 	-X 'main.version=$(VERSION)' \
 	-X 'main.buildNum=$(BUILD_NUM)' \
-	-X 'main.appName=$(APP_NAME_SERVER)' \
-	-X 'main.appLongName=$(APP_LONG_NAME_SERVER)'
+	-X 'main.appName=$(APP_NAME_SERVER)'
 LDFLAGS_CLI = $(LDFLAGS_BASE) \
 	-X 'main.version=$(VERSION)' \
 	-X 'main.buildNum=$(BUILD_NUM)' \
-	-X 'main.appName=$(APP_NAME_CLI)' \
-	-X 'main.appLongName=$(APP_LONG_NAME_CLI)'
+	-X 'main.appName=$(APP_NAME_CLI)'
 
 # Default target
 all: build

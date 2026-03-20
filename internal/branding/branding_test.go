@@ -2,7 +2,16 @@ package branding
 
 import "testing"
 
+// resetBranding restores default state before each test to avoid order dependency.
+func resetBranding() {
+	mu.Lock()
+	defer mu.Unlock()
+	prefix = "cola"
+	appName = "cola-registry"
+}
+
 func TestInit_ColaRegistry(t *testing.T) {
+	resetBranding()
 	Init("cola-registry")
 
 	if got := Prefix(); got != "cola" {
@@ -29,6 +38,7 @@ func TestInit_ColaRegistry(t *testing.T) {
 }
 
 func TestInit_ColaRegctl(t *testing.T) {
+	resetBranding()
 	Init("cola-regctl")
 
 	if got := Prefix(); got != "cola" {
@@ -40,6 +50,7 @@ func TestInit_ColaRegctl(t *testing.T) {
 }
 
 func TestInit_CdtRegistry(t *testing.T) {
+	resetBranding()
 	Init("cdt-registry")
 
 	if got := Prefix(); got != "cdt" {
@@ -66,6 +77,7 @@ func TestInit_CdtRegistry(t *testing.T) {
 }
 
 func TestInit_CdtRegctl(t *testing.T) {
+	resetBranding()
 	Init("cdt-regctl")
 
 	if got := Prefix(); got != "cdt" {
@@ -77,6 +89,7 @@ func TestInit_CdtRegctl(t *testing.T) {
 }
 
 func TestInit_EmptyString(t *testing.T) {
+	resetBranding()
 	Init("cola-registry") // set known state
 	Init("")              // should be a no-op
 
