@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/criteo/command-launcher-registry/internal/auth"
+	"github.com/criteo/command-launcher-registry/internal/branding"
 	"github.com/criteo/command-launcher-registry/internal/config"
 	"github.com/criteo/command-launcher-registry/internal/server"
 	"github.com/criteo/command-launcher-registry/internal/server/handlers"
@@ -25,18 +26,14 @@ const (
 
 // Version information - set from main.go via SetVersionInfo
 var (
-	version     = "dev"
-	buildNum    = "local"
-	appName     = "cola-registry"
-	appLongName = "Command Launcher Registry Server"
+	version  = "dev"
+	buildNum = "local"
 )
 
-// SetVersionInfo sets version information from main package
-func SetVersionInfo(v, b, n, l string) {
-	version = v
-	buildNum = b
-	appName = n
-	appLongName = l
+// SetVersionInfo sets version information from the main package.
+func SetVersionInfo(ver, build string) {
+	version = ver
+	buildNum = build
 }
 
 var v *viper.Viper
@@ -44,28 +41,34 @@ var v *viper.Viper
 // ServerCmd represents the server command
 var ServerCmd = &cobra.Command{
 	Use:   "server",
-	Short: "Start the COLA registry HTTP server",
+	Short: "Start the registry HTTP server",
 	Long:  `Start the HTTP server that serves Command Launcher registry index and provides REST API for registry management.`,
 	RunE:  runServer,
 }
 
-func init() {
+// SetupFlags registers all branding-dependent flags on the server command
+// and binds them to viper. Must be called after branding.Init() and before
+// rootCmd.Execute().
+func SetupFlags() {
 	v = config.NewViper()
 
+	ev := branding.EnvVar // shorthand
+
 	// CLI flags - these take precedence over environment variables
-	ServerCmd.Flags().String("storage-uri", "", "Storage URI (e.g., file://./data/registry.json)")
-	ServerCmd.Flags().String("storage-token", "", "Storage authentication token (passed to storage backend)")
-	ServerCmd.Flags().Int("port", 0, "Server port")
-	ServerCmd.Flags().String("host", "", "Bind address")
-	ServerCmd.Flags().String("log-level", "", "Log level (debug|info|warn|error)")
-	ServerCmd.Flags().String("log-format", "", "Log format (json|text)")
-	ServerCmd.Flags().String("auth-type", "", "Authentication type (none|basic|ldap|custom_jwt)")
-	ServerCmd.Flags().String("auth-ldap-server", "", "LDAP server URL (e.g., ldap://ldap.example.com)")
-	ServerCmd.Flags().Int("auth-ldap-timeout", 30, "LDAP connection timeout (e.g., 30s)")
-	ServerCmd.Flags().String("auth-ldap-bind-dn", "", "LDAP bind DN for service account")
-	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", "LDAP base DN for user searches")
-	ServerCmd.Flags().String("auth-custom-jwt-script", "", "Path to JWT validator script")
-	ServerCmd.Flags().String("auth-custom-jwt-required-group", "", "Required group for authorization")
+	// Defaults here match viper defaults so --help shows them; viper uses flag.Changed for precedence.
+	ServerCmd.Flags().String("storage-uri", "file://./data/registry.json", fmt.Sprintf("Storage URI (or %s)", ev("STORAGE_URI")))
+	ServerCmd.Flags().String("storage-token", "", fmt.Sprintf("Storage authentication token (or %s)", ev("STORAGE_TOKEN")))
+	ServerCmd.Flags().Int("port", 8080, fmt.Sprintf("Server port (or %s)", ev("SERVER_PORT")))
+	ServerCmd.Flags().String("host", "0.0.0.0", fmt.Sprintf("Bind address (or %s)", ev("SERVER_HOST")))
+	ServerCmd.Flags().String("log-level", "info", fmt.Sprintf("Log level: debug|info|warn|error (or %s)", ev("LOGGING_LEVEL")))
+	ServerCmd.Flags().String("log-format", "json", fmt.Sprintf("Log format: json|text (or %s)", ev("LOGGING_FORMAT")))
+	ServerCmd.Flags().String("auth-type", "none", fmt.Sprintf("Authentication type: none|basic|ldap|custom_jwt (or %s)", ev("AUTH_TYPE")))
+	ServerCmd.Flags().String("auth-ldap-server", "", fmt.Sprintf("LDAP server URL, e.g., ldap://ldap.example.com (or %s)", ev("AUTH_LDAP_SERVER")))
+	ServerCmd.Flags().Int("auth-ldap-timeout", 30, fmt.Sprintf("LDAP connection timeout in seconds (or %s)", ev("AUTH_LDAP_TIMEOUT")))
+	ServerCmd.Flags().String("auth-ldap-bind-dn", "", fmt.Sprintf("LDAP bind DN for service account (or %s)", ev("AUTH_LDAP_BIND_DN")))
+	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", fmt.Sprintf("LDAP base DN for user searches (or %s)", ev("AUTH_LDAP_USER_BASE_DN")))
+	ServerCmd.Flags().String("auth-custom-jwt-script", "", fmt.Sprintf("Path to JWT validator script (or %s)", ev("AUTH_CUSTOM_JWT_SCRIPT")))
+	ServerCmd.Flags().String("auth-custom-jwt-required-group", "", fmt.Sprintf("Required group for authorization (or %s)", ev("AUTH_CUSTOM_JWT_REQUIRED_GROUP")))
 
 	// Bind CLI flags to viper
 	v.BindPFlag("storage.uri", ServerCmd.Flags().Lookup("storage-uri"))

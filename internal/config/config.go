@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"github.com/criteo/command-launcher-registry/internal/branding"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
 
@@ -86,8 +87,8 @@ func Load() (*Config, error) {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 
-	// Bind environment variables with COLA_REGISTRY_ prefix
-	v.SetEnvPrefix("COLA_REGISTRY")
+	// Bind environment variables with prefix derived from branding (e.g., COLA_REGISTRY_)
+	v.SetEnvPrefix(branding.EnvPrefix())
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
@@ -134,8 +135,8 @@ func NewViper() *viper.Viper {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 
-	// Bind environment variables with COLA_REGISTRY_ prefix
-	v.SetEnvPrefix("COLA_REGISTRY")
+	// Bind environment variables with prefix derived from branding (e.g., COLA_REGISTRY_)
+	v.SetEnvPrefix(branding.EnvPrefix())
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 

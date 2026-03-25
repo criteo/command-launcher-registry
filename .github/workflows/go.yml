@@ -40,12 +40,13 @@ jobs:
           path: coverage.txt
 
   build:
-    name: Build ${{ matrix.os }}/${{ matrix.arch }}
+    name: Build ${{ matrix.prefix }}/${{ matrix.os }}/${{ matrix.arch }}
     runs-on: ubuntu-latest
     needs: check
     strategy:
       fail-fast: false
       matrix:
+        prefix: [cola, cdt]
         os: [darwin, linux, windows]
         arch: [amd64, arm64]
         exclude:
@@ -82,8 +83,9 @@ jobs:
           if [ "${{ matrix.os }}" = "windows" ]; then
             EXT=".exe"
           fi
-          LDFLAGS="-s -w -X 'main.version=${{ steps.version.outputs.VERSION }}' -X 'main.buildNum=${{ steps.version.outputs.BUILD_NUM }}' -X 'main.appName=cola-registry' -X 'main.appLongName=Command Launcher Registry Server'"
-          go build -ldflags="${LDFLAGS}" -o cola-registry${EXT} ./cmd/cola-registry
+          PREFIX="${{ matrix.prefix }}"
+          LDFLAGS="-s -w -X 'main.version=${{ steps.version.outputs.VERSION }}' -X 'main.buildNum=${{ steps.version.outputs.BUILD_NUM }}' -X 'main.appName=${PREFIX}-registry'"
+          go build -ldflags="${LDFLAGS}" -o ${PREFIX}-registry${EXT} ./cmd/cola-registry
 
       - name: Build client
         env:
@@ -95,17 +97,18 @@ jobs:
           if [ "${{ matrix.os }}" = "windows" ]; then
             EXT=".exe"
           fi
-          LDFLAGS="-s -w -X 'main.version=${{ steps.version.outputs.VERSION }}' -X 'main.buildNum=${{ steps.version.outputs.BUILD_NUM }}' -X 'main.appName=cola-regctl' -X 'main.appLongName=Command Launcher Registry CLI'"
-          go build -ldflags="${LDFLAGS}" -o cola-regctl${EXT} ./cmd/cola-regctl
+          PREFIX="${{ matrix.prefix }}"
+          LDFLAGS="-s -w -X 'main.version=${{ steps.version.outputs.VERSION }}' -X 'main.buildNum=${{ steps.version.outputs.BUILD_NUM }}' -X 'main.appName=${PREFIX}-regctl'"
+          go build -ldflags="${LDFLAGS}" -o ${PREFIX}-regctl${EXT} ./cmd/cola-regctl
 
       - name: Upload artifacts
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          name: binaries-${{ matrix.prefix }}-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            cola-registry*
-            cola-regctl*
+            ${{ matrix.prefix }}-registry*
+            ${{ matrix.prefix }}-regctl*
 
   package:
     name: Package Release
@@ -127,16 +130,17 @@ jobs:
           mkdir -p release
           mkdir -p zip-content
 
-          # Process each platform/arch combination
+          # Process each prefix/platform/arch combination
           for dir in artifacts/binaries-*; do
             if [ -d "$dir" ]; then
-              # Extract os and arch from directory name (binaries-os-arch)
+              # Extract prefix, os and arch from directory name (binaries-prefix-os-arch)
               dirname=$(basename "$dir")
-              os=$(echo "$dirname" | cut -d'-' -f2)
-              arch=$(echo "$dirname" | cut -d'-' -f3)
+              prefix=$(echo "$dirname" | cut -d'-' -f2)
+              os=$(echo "$dirname" | cut -d'-' -f3)
+              arch=$(echo "$dirname" | cut -d'-' -f4)
 
               # Create directory structure for zip
-              mkdir -p "zip-content/${os}/${arch}"
+              mkdir -p "zip-content/${prefix}/${os}/${arch}"
 
               # Determine extension
               ext=""
@@ -145,21 +149,24 @@ jobs:
               fi
 
               # Copy and rename for individual release (with version suffix)
-              if [ -f "$dir/cola-registry${ext}" ]; then
-                cp "$dir/cola-registry${ext}" "release/cola-registry_${os}_${arch}_${{ steps.version.outputs.VERSION }}${ext}"
-                cp "$dir/cola-registry${ext}" "zip-content/${os}/${arch}/cola-registry${ext}"
+              if [ -f "$dir/${prefix}-registry${ext}" ]; then
+                cp "$dir/${prefix}-registry${ext}" "release/${prefix}-registry_${os}_${arch}_${{ steps.version.outputs.VERSION }}${ext}"
+                cp "$dir/${prefix}-registry${ext}" "zip-content/${prefix}/${os}/${arch}/${prefix}-registry${ext}"
               fi
 
-              if [ -f "$dir/cola-regctl${ext}" ]; then
-                cp "$dir/cola-regctl${ext}" "release/cola-regctl_${os}_${arch}_${{ steps.version.outputs.VERSION }}${ext}"
-                cp "$dir/cola-regctl${ext}" "zip-content/${os}/${arch}/cola-regctl${ext}"
+              if [ -f "$dir/${prefix}-regctl${ext}" ]; then
+                cp "$dir/${prefix}-regctl${ext}" "release/${prefix}-regctl_${os}_${arch}_${{ steps.version.outputs.VERSION }}${ext}"
+                cp "$dir/${prefix}-regctl${ext}" "zip-content/${prefix}/${os}/${arch}/${prefix}-regctl${ext}"
               fi
             fi
           done
 
-          # Create consolidated zip
+          # Create consolidated zip per prefix
           cd zip-content
-          zip -r "../release/cola-registry_${{ steps.version.outputs.VERSION }}.zip" .
+          for prefix in */; do
+            prefix_name="${prefix%/}"
+            zip -r "../release/${prefix_name}-registry_${{ steps.version.outputs.VERSION }}.zip" "${prefix_name}/"
+          done
           cd ..
 
           # List release contents
