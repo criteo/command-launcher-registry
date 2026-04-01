@@ -627,13 +627,11 @@ components:
         startPartition:
           type: integer
           minimum: 0
-          maximum: 9
-          description: Start of partition range
+          description: Start of partition range (may be greater than endPartition for legacy/disabled entries)
           example: 0
         endPartition:
           type: integer
           minimum: 0
-          maximum: 9
           description: End of partition range
           example: 9
 
@@ -817,9 +815,13 @@ components:
           example: 'https://artifacts.example.com/hotfix-1.0.0.zip'
         startPartition:
           type: integer
+          minimum: 0
+          description: Start of partition range (may be greater than endPartition for legacy/disabled entries)
           example: 0
         endPartition:
           type: integer
+          minimum: 0
+          description: End of partition range
           example: 9
 
     CreateVersionRequest:
@@ -846,9 +848,13 @@ components:
           example: 'https://artifacts.example.com/hotfix-1.0.0.zip'
         startPartition:
           type: integer
+          minimum: 0
+          description: Start of partition range (may be greater than endPartition for legacy/disabled entries)
           example: 0
         endPartition:
           type: integer
+          minimum: 0
+          description: End of partition range
           example: 9
 
     Error:
@@ -869,7 +875,6 @@ components:
             - VERSION_ALREADY_EXISTS
             - VALIDATION_ERROR
             - INVALID_PARTITION
-            - PARTITION_OVERLAP
             - STORAGE_UNAVAILABLE
             - UNAUTHORIZED
             - RATE_LIMIT_EXCEEDED

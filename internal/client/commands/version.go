@@ -66,8 +66,8 @@ func init() {
 	// Create flags
 	versionCreateCmd.Flags().StringVar(&versionChecksum, "checksum", "", "SHA256 checksum (64 hex characters) (required)")
 	versionCreateCmd.Flags().StringVar(&versionURL, "url", "", "Download URL (required)")
-	versionCreateCmd.Flags().IntVar(&versionStartPart, "start-partition", 0, "Start partition (0-9)")
-	versionCreateCmd.Flags().IntVar(&versionEndPart, "end-partition", 9, "End partition (0-9)")
+	versionCreateCmd.Flags().IntVar(&versionStartPart, "start-partition", 0, "Start partition")
+	versionCreateCmd.Flags().IntVar(&versionEndPart, "end-partition", 9, "End partition")
 
 	// Mark required flags
 	versionCreateCmd.MarkFlagRequired("checksum")
@@ -91,14 +91,11 @@ func validateChecksum(checksum string) error {
 }
 
 func validatePartitionRange(start, end int) error {
-	if start < 0 || start > 9 {
-		return fmt.Errorf("start partition must be between 0 and 9")
+	if start < 0 {
+		return fmt.Errorf("start partition must be >= 0")
 	}
-	if end < 0 || end > 9 {
-		return fmt.Errorf("end partition must be between 0 and 9")
-	}
-	if start > end {
-		return fmt.Errorf("start partition (%d) cannot be greater than end partition (%d)", start, end)
+	if end < 0 {
+		return fmt.Errorf("end partition must be >= 0")
 	}
 	return nil
 }
