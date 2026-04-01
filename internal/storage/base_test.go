@@ -281,7 +281,7 @@ func TestBaseStorage_CreateVersion_Immutability(t *testing.T) {
 	assert.ErrorIs(t, err, ErrImmutabilityViolation)
 }
 
-func TestBaseStorage_CreateVersion_PartitionOverlap(t *testing.T) {
+func TestBaseStorage_CreateVersion_PartitionOverlapAllowed(t *testing.T) {
 	bs := newTestBaseStorage()
 	ctx := context.Background()
 
@@ -304,7 +304,7 @@ func TestBaseStorage_CreateVersion_PartitionOverlap(t *testing.T) {
 	err = bs.CreateVersion(ctx, "test-reg", "test-pkg", ver1, nil)
 	require.NoError(t, err)
 
-	// Try to create overlapping version with partitions 3-7
+	// Create overlapping version with partitions 3-7 — should succeed
 	ver2 := &models.Version{
 		Name:           "test-pkg",
 		Version:        "2.0.0",
@@ -312,7 +312,31 @@ func TestBaseStorage_CreateVersion_PartitionOverlap(t *testing.T) {
 		EndPartition:   7,
 	}
 	err = bs.CreateVersion(ctx, "test-reg", "test-pkg", ver2, nil)
-	assert.ErrorIs(t, err, ErrPartitionOverlap)
+	assert.NoError(t, err)
+}
+
+func TestBaseStorage_CreateVersion_StartGreaterThanEnd(t *testing.T) {
+	bs := newTestBaseStorage()
+	ctx := context.Background()
+
+	// Setup
+	reg := models.NewRegistry("test-reg", "", nil, nil)
+	err := bs.CreateRegistry(ctx, reg, nil)
+	require.NoError(t, err)
+
+	pkg := models.NewPackage("test-pkg", "", nil, nil)
+	err = bs.CreatePackage(ctx, "test-reg", pkg, nil)
+	require.NoError(t, err)
+
+	// Create version where startPartition > endPartition (legacy convention)
+	ver := &models.Version{
+		Name:           "test-pkg",
+		Version:        "1.0.0",
+		StartPartition: 21,
+		EndPartition:   9,
+	}
+	err = bs.CreateVersion(ctx, "test-reg", "test-pkg", ver, nil)
+	assert.NoError(t, err)
 }
 
 func TestBaseStorage_DeleteVersion(t *testing.T) {
