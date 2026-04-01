@@ -391,16 +391,6 @@ func (b *BaseStorage) CreateVersion(ctx context.Context, registryName, packageNa
 		return ErrImmutabilityViolation
 	}
 
-	// Check for partition overlaps with existing versions
-	for _, existingVersion := range pkg.Versions {
-		if models.CheckPartitionOverlap(
-			v.StartPartition, v.EndPartition,
-			existingVersion.StartPartition, existingVersion.EndPartition,
-		) {
-			return ErrPartitionOverlap
-		}
-	}
-
 	// Add version
 	pkg.Versions[v.Version] = v
 

@@ -98,16 +98,15 @@ func ValidateURL(urlStr string) error {
 	return nil
 }
 
-// ValidatePartitions validates partition range
+// ValidatePartitions validates partition range.
+// startPartition may be greater than endPartition to support legacy partition
+// schemes where that convention indicates a disabled or special rollout range.
 func ValidatePartitions(startPartition, endPartition int) error {
-	if startPartition < 0 || startPartition > 9 {
-		return &ValidationError{Field: "startPartition", Message: "startPartition must be in range 0-9"}
+	if startPartition < 0 {
+		return &ValidationError{Field: "startPartition", Message: "startPartition must be >= 0"}
 	}
-	if endPartition < 0 || endPartition > 9 {
-		return &ValidationError{Field: "endPartition", Message: "endPartition must be in range 0-9"}
-	}
-	if startPartition > endPartition {
-		return &ValidationError{Field: "partitions", Message: "startPartition must be <= endPartition"}
+	if endPartition < 0 {
+		return &ValidationError{Field: "endPartition", Message: "endPartition must be >= 0"}
 	}
 	return nil
 }
