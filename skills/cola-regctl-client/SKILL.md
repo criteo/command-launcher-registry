@@ -244,9 +244,9 @@ Prompts for confirmation unless `--yes` is set.
 
 ### Partitions
 
-- Range: 0–9 for both start and end
-- `startPartition` must be <= `endPartition`
-- **Partition ranges must not overlap** with existing versions of the same package. To roll out a new version to all users, first delete the old version or use non-overlapping partition ranges.
+- Must be >= 0 (no upper bound enforced)
+- `startPartition` may be greater than `endPartition` (legacy convention for disabled/special rollout)
+- Partition ranges **may overlap** across versions of the same package (multiple versions can cover the same partitions)
 
 ### Download URLs
 

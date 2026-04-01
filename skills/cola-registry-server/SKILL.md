@@ -163,9 +163,9 @@ Base path: `/api/v1`
 
 ### Partitions
 
-- Range: 0–9 for both start and end
-- `startPartition` must be <= `endPartition`
-- **Partition ranges must not overlap** with existing versions of the same package. Creating a version with partitions that overlap an existing version will be rejected with `PARTITION_OVERLAP`.
+- Must be >= 0 (no upper bound enforced)
+- `startPartition` may be greater than `endPartition` (legacy convention for disabled/special rollout)
+- Partition ranges **may overlap** across versions of the same package (multiple versions can cover the same partitions)
 
 ### Download URLs
 
