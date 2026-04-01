@@ -649,6 +649,33 @@ The CLI stores credentials securely using OS-native mechanisms:
 
 Credentials are stored at: `~/.config/cola-registry/credentials.yaml`
 
+## AI Agent Skills
+
+This repository includes [Agent Skills](https://agentskills.io/) that provide complete CLI references for AI coding agents (Claude Code, Cursor, OpenCode, and others).
+
+### Install
+
+```bash
+npx skills add criteo/command-launcher-registry
+```
+
+This will prompt you to select which skills to install:
+
+- **cola-registry-server** — Server CLI reference: all flags, env vars, storage URIs, API endpoints, auth types, and validation rules
+- **cola-regctl-client** — Client CLI reference: all commands, flags, env vars, credential storage, and validation rules
+
+### What skills provide
+
+Once installed, your AI agent gets full knowledge of:
+
+- Every CLI flag and its corresponding environment variable
+- All API endpoints with methods and auth requirements
+- Validation rules (name patterns, partition overlap, checksum format, etc.)
+- Credential storage locations per platform
+- Configuration precedence (flags > env vars > stored credentials)
+
+This means you can ask your agent things like *"create a registry with two packages and roll out v2 to 30% of users"* and it will know the exact commands, flags, and constraints.
+
 ## Documentation
 
 - **[Complete Specification](./docs/spec.md)** - Full specification covering both server and CLI client
