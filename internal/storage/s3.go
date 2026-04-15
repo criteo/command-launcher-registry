@@ -208,6 +208,34 @@ func (s *S3Storage) GetRegistryIndex(ctx context.Context, registryName string) (
 	return s.BaseStorage.GetRegistryIndex(ctx, registryName)
 }
 
+// PutManifest stores a canonical JSON manifest blob if it does not already exist.
+func (s *S3Storage) PutManifest(ctx context.Context, digest string, content []byte) error {
+	key := manifestKeyForObject(s.key, digest)
+	exists, err := s.client.StatObject(ctx, key)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	return s.client.UploadObject(ctx, key, content, "application/json")
+}
+
+// GetManifest retrieves a canonical JSON manifest blob by digest.
+func (s *S3Storage) GetManifest(ctx context.Context, digest string) ([]byte, error) {
+	key := manifestKeyForObject(s.key, digest)
+	exists, err := s.client.StatObject(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrManifestNotFound
+	}
+
+	return s.client.DownloadObject(ctx, key)
+}
+
 // Close closes the storage (no-op for S3 storage)
 func (s *S3Storage) Close() error {
 	return nil

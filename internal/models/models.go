@@ -26,6 +26,7 @@ type Version struct {
 	URL            string `json:"url"`            // Download URL
 	StartPartition int    `json:"startPartition"` // 0-9
 	EndPartition   int    `json:"endPartition"`   // 0-9
+	ManifestDigest string `json:"manifestDigest,omitempty"`
 }
 
 // IndexEntry represents an entry in the registry index.json (Command Launcher format)

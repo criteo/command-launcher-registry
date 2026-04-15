@@ -110,12 +110,16 @@ export COLA_REGISTRY_TOKEN=admin:admin  # or use JWT token
 # Publish a version
 ./bin/cola-regctl version create my-tools my-cli 1.0.0 \
   --checksum "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
-  --url "https://downloads.example.com/my-cli-1.0.0.zip" \
+  --download-url "https://downloads.example.com/my-cli-1.0.0.zip" \
+  --manifest "./manifests/my-cli.yaml" \
   --start-partition 0 \
   --end-partition 9
 
 # List versions
 ./bin/cola-regctl version list my-tools my-cli
+
+# Get the canonical JSON manifest
+./bin/cola-regctl version manifest my-tools my-cli 1.0.0 | jq '.'
 
 # Get JSON output (for scripting)
 ./bin/cola-regctl registry list --json
@@ -562,7 +566,8 @@ cola-regctl package delete <registry> <package>
 # Publish a version
 cola-regctl version create <registry> <package> <version> \
   --checksum "abc123..." \
-  --url "https://downloads.example.com/package-1.0.0.zip" \
+  --download-url "https://downloads.example.com/package-1.0.0.zip" \
+  --manifest "./manifests/package.yaml" \
   --start-partition 0 \
   --end-partition 9
 
@@ -572,6 +577,7 @@ cola-regctl version list <registry> <package> --json
 
 # Get version details
 cola-regctl version get <registry> <package> <version>
+cola-regctl version manifest <registry> <package> <version>
 
 # Delete version
 cola-regctl version delete <registry> <package> <version>
@@ -611,14 +617,16 @@ cola-regctl package create build-tools deployer \
 # Publish version 1.0.0 (for partitions 0-4 = 50% rollout)
 cola-regctl version create build-tools deployer 1.0.0 \
   --checksum "abc123..." \
-  --url "https://cdn.example.com/deployer-1.0.0.tar.gz" \
+  --download-url "https://cdn.example.com/deployer-1.0.0.tar.gz" \
+  --manifest "./manifests/deployer.yaml" \
   --start-partition 0 \
   --end-partition 4
 
 # Publish version 1.1.0 (for partitions 5-9 = 50% rollout)
 cola-regctl version create build-tools deployer 1.1.0 \
   --checksum "def456..." \
-  --url "https://cdn.example.com/deployer-1.1.0.tar.gz" \
+  --download-url "https://cdn.example.com/deployer-1.1.0.tar.gz" \
+  --manifest "./manifests/deployer-v1.1.0.yaml" \
   --start-partition 5 \
   --end-partition 9
 

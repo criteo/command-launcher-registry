@@ -521,6 +521,30 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
+  /registry/{name}/package/{package}/version/{version}/manifest:
+    get:
+      tags:
+        - Version
+      summary: Get the canonical JSON manifest for a version
+      operationId: getVersionManifest
+      parameters:
+        - $ref: '#/components/parameters/RegistryName'
+        - $ref: '#/components/parameters/PackageName'
+        - $ref: '#/components/parameters/VersionString'
+      security:
+        - basicAuth: []
+        - {}
+      responses:
+        '200':
+          description: Canonical JSON manifest
+          content:
+            application/json:
+              schema: {}
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
     delete:
       tags:
         - Version
@@ -813,6 +837,14 @@ components:
           pattern: '^https?://'
           maxLength: 2048
           example: 'https://artifacts.example.com/hotfix-1.0.0.zip'
+        manifest:
+          type: string
+          description: Package manifest content in JSON or YAML. The server normalizes and persists it as canonical JSON.
+          maxLength: 131072
+          example: |
+            commands:
+              - name: deploy
+                description: Deploy the service
         startPartition:
           type: integer
           minimum: 0
@@ -873,6 +905,7 @@ components:
             - PACKAGE_ALREADY_EXISTS
             - VERSION_NOT_FOUND
             - VERSION_ALREADY_EXISTS
+            - MANIFEST_NOT_FOUND
             - VALIDATION_ERROR
             - INVALID_PARTITION
             - STORAGE_UNAVAILABLE

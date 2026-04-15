@@ -17,6 +17,7 @@ const (
 	ErrCodePackageAlreadyExists  ErrorCode = "PACKAGE_ALREADY_EXISTS"
 	ErrCodeVersionNotFound       ErrorCode = "VERSION_NOT_FOUND"
 	ErrCodeVersionAlreadyExists  ErrorCode = "VERSION_ALREADY_EXISTS"
+	ErrCodeManifestNotFound      ErrorCode = "MANIFEST_NOT_FOUND"
 	ErrCodeValidationError       ErrorCode = "VALIDATION_ERROR"
 	ErrCodeInvalidPartition      ErrorCode = "INVALID_PARTITION"
 	ErrCodePartitionOverlap      ErrorCode = "PARTITION_OVERLAP"
@@ -63,6 +64,8 @@ func MapStorageError(err error, resourceType string) (ErrorCode, string, int) {
 			return ErrCodePackageNotFound, "Package not found", http.StatusNotFound
 		case "version":
 			return ErrCodeVersionNotFound, "Version not found", http.StatusNotFound
+		case "manifest":
+			return ErrCodeManifestNotFound, "Manifest not found", http.StatusNotFound
 		default:
 			return ErrCodeRegistryNotFound, "Resource not found", http.StatusNotFound
 		}
@@ -87,6 +90,9 @@ func MapStorageError(err error, resourceType string) (ErrorCode, string, int) {
 
 	case storage.ErrPartitionOverlap:
 		return ErrCodePartitionOverlap, "Partition ranges overlap with existing version", http.StatusBadRequest
+
+	case storage.ErrManifestNotFound:
+		return ErrCodeManifestNotFound, "Manifest not found", http.StatusNotFound
 
 	default:
 		return ErrCodeStorageUnavailable, "Internal server error", http.StatusInternalServerError
