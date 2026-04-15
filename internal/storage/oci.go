@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/criteo/command-launcher-registry/internal/models"
 )
@@ -15,6 +16,8 @@ type OCIStorage struct {
 	*BaseStorage // Embedded for shared CRUD logic
 	client       *OCIClient
 	reference    string // OCI reference "registry/repo:latest"
+	token        string
+	logger       *slog.Logger
 }
 
 // NewOCIStorage creates a new OCI-backed storage.
@@ -37,6 +40,8 @@ func NewOCIStorage(uri *StorageURI, token string, logger *slog.Logger) (*OCIStor
 		BaseStorage: NewBaseStorage(logger),
 		client:      client,
 		reference:   reference,
+		token:       token,
+		logger:      logger,
 	}
 
 	// Load existing data from OCI or initialize empty storage
@@ -182,7 +187,48 @@ func (s *OCIStorage) GetRegistryIndex(ctx context.Context, registryName string) 
 	return s.BaseStorage.GetRegistryIndex(ctx, registryName)
 }
 
+// PutManifest stores a canonical JSON manifest blob if it does not already exist.
+func (s *OCIStorage) PutManifest(ctx context.Context, digest string, content []byte) error {
+	client, err := NewOCIClient(s.manifestReference(digest), s.token, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create OCI manifest client: %w", err)
+	}
+
+	exists, err := client.Exists(ctx)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	return client.PushArtifact(ctx, content, OCIManifestBlob)
+}
+
+// GetManifest retrieves a canonical JSON manifest blob by digest.
+func (s *OCIStorage) GetManifest(ctx context.Context, digest string) ([]byte, error) {
+	client, err := NewOCIClient(s.manifestReference(digest), s.token, s.logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCI manifest client: %w", err)
+	}
+
+	exists, err := client.Exists(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrManifestNotFound
+	}
+
+	return client.Pull(ctx)
+}
+
 // Close closes the storage (no-op for OCI storage)
 func (s *OCIStorage) Close() error {
 	return nil
+}
+
+func (s *OCIStorage) manifestReference(digest string) string {
+	base := strings.TrimSuffix(s.reference, ":latest")
+	return fmt.Sprintf("%s:manifest-%s", base, digest)
 }

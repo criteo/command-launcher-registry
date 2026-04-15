@@ -272,9 +272,16 @@ export COLA_REGISTRY_TOKEN=eyJhbGciOiJIUz...  # JWT token
 ```bash
 ./bin/cola-regctl version create my-tools deployment-cli 1.0.0 \
   --checksum "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" \
-  --url "https://releases.example.com/deployment-cli-1.0.0.tar.gz" \
+  --download-url "https://releases.example.com/deployment-cli-1.0.0.tar.gz" \
+  --manifest "./manifests/deployment-cli.yaml" \
   --start-partition 0 \
   --end-partition 9
+```
+
+### Retrieve the Canonical Manifest
+
+```bash
+./bin/cola-regctl version manifest my-tools deployment-cli 1.0.0 | jq
 ```
 
 ### Verify the Registry Index
