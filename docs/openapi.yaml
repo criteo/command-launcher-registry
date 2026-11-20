@@ -385,6 +385,10 @@ paths:
       tags:
         - Package
       summary: Create a new package
+      description: |
+        Requires registry admin of this registry (or server admin) when role
+        enforcement is on. The caller sets `maintainers`; it is not added to
+        the list implicitly.
       operationId: createPackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -409,6 +413,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a registry admin of this registry: "requires registry admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -450,6 +455,12 @@ paths:
         from the body (or `null`) keeps the stored value. `name` is optional
         and, when present, must equal the package name in the URL (400
         otherwise). Versions are always preserved.
+
+        Requires package maintainer of this package (or registry admin of its
+        registry, or server admin) when role enforcement is on; this covers
+        `description`, `custom_values` and `maintainers`, so maintainers add
+        and remove co-maintainers themselves. A package with an empty
+        `maintainers` list can be changed only by registry and server admins.
       operationId: updatePackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -475,6 +486,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a maintainer of this package: "requires package maintainer on {name}/{package}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -484,7 +496,10 @@ paths:
       tags:
         - Package
       summary: Delete a package
-      description: Deletes the package and all its versions
+      description: |
+        Deletes the package and all its versions. Requires registry admin of
+        this registry (or server admin) when role enforcement is on; package
+        maintainers cannot delete their package.
       operationId: deletePackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -498,6 +513,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a registry admin of this registry: "requires registry admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -533,7 +549,10 @@ paths:
       tags:
         - Version
       summary: Create a new version
-      description: Creates an immutable package version
+      description: |
+        Creates an immutable package version. Requires package maintainer of
+        this package (or registry admin of its registry, or server admin) when
+        role enforcement is on.
       operationId: createVersion
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -559,6 +578,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a maintainer of this package: "requires package maintainer on {name}/{package}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -595,6 +615,9 @@ paths:
       tags:
         - Version
       summary: Delete a version
+      description: |
+        Requires package maintainer of this package (or registry admin of its
+        registry, or server admin) when role enforcement is on.
       operationId: deleteVersion
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -609,6 +632,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a maintainer of this package: "requires package maintainer on {name}/{package}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -840,7 +864,13 @@ components:
           example: Hotfix deployment tool
         maintainers:
           type: array
-          description: Package maintainers, as user or group principals (informational only, not enforced in v1)
+          description: |
+            Package maintainers, as user or group principals. When role
+            enforcement is on, they hold the package maintainer role on this
+            package (ADR 0001): they update it, including this list, and
+            publish and delete its versions. Registry admins of its registry
+            and server admins hold the role too. An empty list leaves the
+            package to them. The creator is not added implicitly.
           items:
             $ref: '#/components/schemas/Principal'
           example: ['team-build']
@@ -878,7 +908,13 @@ components:
           example: Hotfix deployment tool
         maintainers:
           type: array
-          description: Package maintainers, as user or group principals (informational only, not enforced in v1)
+          description: |
+            Package maintainers, as user or group principals. When role
+            enforcement is on, they hold the package maintainer role on this
+            package (ADR 0001): they update it, including this list, and
+            publish and delete its versions. Registry admins of its registry
+            and server admins hold the role too. An empty list leaves the
+            package to them. The creator is not added implicitly.
           items:
             $ref: '#/components/schemas/Principal'
           example: ['team-build']
@@ -901,7 +937,14 @@ components:
           example: Updated description
         maintainers:
           type: array
-          description: Package maintainers, as user or group principals
+          description: |
+            Package maintainers, as user or group principals. When role
+            enforcement is on, they hold the package maintainer role on this
+            package (ADR 0001): they update it, including this list, and
+            publish and delete its versions. Registry admins of its registry
+            and server admins hold the role too. An empty list leaves the
+            package to them. The creator is not added implicitly.
+            Present: replaces the list (`[]` clears it); absent: kept.
           items:
             $ref: '#/components/schemas/Principal'
         custom_values:

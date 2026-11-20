@@ -1,6 +1,8 @@
 # Baseline: binary, branding, auth and CRUD through cdt-regctl. Role
 # enforcement is on (CDT_REGISTRY_ADMINS in compose.yml), so registry creates
-# and deletes run as the server admin; tests/e2e/scenarios/20-* cover roles.
+# and deletes run as the server admin, who makes e2e-writer and svc-e2e-ci
+# registry admins of the baseline registries so they can write packages and
+# versions; tests/e2e/scenarios/20-* and 30-* cover roles.
 # Sourced by tests/e2e/run.sh with tests/e2e/lib.sh loaded.
 
 WRITER=$(mint_token user e2e-writer)
@@ -42,7 +44,8 @@ check_status "identity unknown to IDM gets 401" 401 POST /api/v1/registry/ "$(mi
 
 section "baseline: create and read back through cdt-regctl"
 
-check_regctl "create registry (server admin)" "$SERVER_ADMIN" registry create e2e-base --description "E2E baseline registry"
+check_regctl "create registry (server admin, writers as registry admins)" "$SERVER_ADMIN" \
+	registry create e2e-base --description "E2E baseline registry" --admin "e2e-writer, svc-e2e-ci"
 check_regctl "create package" "$WRITER" package create e2e-base hello --description "Hello package"
 check_regctl "publish version 1.0.0" "$WRITER" version create e2e-base hello 1.0.0 \
 	--checksum "$E2E_CHECKSUM" --url https://example.com/hello-1.0.0.zip --start-partition 0 --end-partition 9
@@ -62,7 +65,8 @@ check_contains "index.json carries the checksum" "$OUT" "$E2E_CHECKSUM"
 
 section "baseline: delete through cdt-regctl (cascade)"
 
-check_regctl "create throwaway registry (server admin)" "$SERVER_ADMIN" registry create e2e-throwaway
+check_regctl "create throwaway registry (server admin, writer as registry admin)" "$SERVER_ADMIN" \
+	registry create e2e-throwaway --admin e2e-writer
 check_regctl "create throwaway package" "$WRITER" package create e2e-throwaway tmp
 check_regctl "delete throwaway registry (--yes, server admin)" "$SERVER_ADMIN" registry delete e2e-throwaway
 check_status "deleted registry is gone" 404 GET /api/v1/registry/e2e-throwaway/

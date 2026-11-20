@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -9,20 +10,25 @@ import (
 
 	"github.com/criteo/command-launcher-registry/internal/apierrors"
 	"github.com/criteo/command-launcher-registry/internal/models"
+	"github.com/criteo/command-launcher-registry/internal/roles"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
 
-// PackageHandler handles package CRUD operations
+// PackageHandler handles package CRUD operations. Each write is checked
+// against the caller's roles by the authorizer's guard, under the storage
+// lock.
 type PackageHandler struct {
-	store  storage.Store
-	logger *slog.Logger
+	store      storage.Store
+	authorizer *Authorizer
+	logger     *slog.Logger
 }
 
 // NewPackageHandler creates a new package handler
-func NewPackageHandler(store storage.Store, logger *slog.Logger) *PackageHandler {
+func NewPackageHandler(store storage.Store, authorizer *Authorizer, logger *slog.Logger) *PackageHandler {
 	return &PackageHandler{
-		store:  store,
-		logger: logger,
+		store:      store,
+		authorizer: authorizer,
+		logger:     logger,
 	}
 }
 
@@ -58,9 +64,15 @@ func (h *PackageHandler) CreatePackage(w http.ResponseWriter, r *http.Request) {
 		pkg.Versions = make(map[string]*models.Version)
 	}
 
-	// Create package
-	// nil guard: roles on package and version writes come with ticket 08.
-	if err := h.store.CreatePackage(r.Context(), registryName, &pkg, nil); err != nil {
+	// Create package: needs registry admin. The caller is not added to
+	// maintainers; the audit line logs the maintainers the package starts with.
+	guard := h.authorizer.Guard(r, roles.CreatePackage, roles.Target{Registry: registryName, Package: pkg.Name}, &pkg.Maintainers)
+	if err := h.store.CreatePackage(r.Context(), registryName, &pkg, guard); err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			code, msg, status := apierrors.MapStorageError(err, "registry")
 			apierrors.WriteError(w, code, msg, status, nil)
@@ -162,10 +174,16 @@ func (h *PackageHandler) UpdatePackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update package (merged under the storage lock, versions preserved)
-	// nil guard: roles on package and version writes come with ticket 08.
-	pkg, err := h.store.UpdatePackage(r.Context(), registryName, packageName, &update, nil)
+	// Update package (merged under the storage lock, versions preserved):
+	// needs package maintainer.
+	guard := h.authorizer.Guard(r, roles.UpdatePackage, roles.Target{Registry: registryName, Package: packageName}, update.Maintainers)
+	pkg, err := h.store.UpdatePackage(r.Context(), registryName, packageName, &update, guard)
 	if err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			// Determine if registry or package not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {
@@ -205,9 +223,15 @@ func (h *PackageHandler) DeletePackage(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "name")
 	packageName := chi.URLParam(r, "package")
 
-	// Delete package (cascade delete handled by storage layer)
-	// nil guard: roles on package and version writes come with ticket 08.
-	if err := h.store.DeletePackage(r.Context(), registryName, packageName, nil); err != nil {
+	// Delete package (cascade delete handled by storage layer): needs
+	// registry admin.
+	guard := h.authorizer.Guard(r, roles.DeletePackage, roles.Target{Registry: registryName, Package: packageName}, nil)
+	if err := h.store.DeletePackage(r.Context(), registryName, packageName, guard); err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			// Determine if registry or package not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {
