@@ -220,6 +220,8 @@ Flags:
   --auth-ldap-user-base-dn string  LDAP base DN for user searches
   --auth-ldap-timeout int          LDAP connection timeout in seconds
                                    Default: 30
+  --require-maintainers    Reject packages with no maintainers (see Required Maintainers)
+                           Default: false
 ```
 
 ### Environment Variables
@@ -235,6 +237,7 @@ export COLA_REGISTRY_LOGGING_LEVEL=info
 export COLA_REGISTRY_LOGGING_FORMAT=json
 export COLA_REGISTRY_AUTH_TYPE=basic
 export COLA_REGISTRY_AUTH_USERS_FILE=./users.yaml  # Environment-only (no CLI flag)
+export COLA_REGISTRY_REQUIRE_MAINTAINERS=false
 ```
 
 ### Custom JWT Authentication
@@ -308,6 +311,25 @@ export COLA_REGISTRY_AUTH_LDAP_GROUP_BASE_DN=ou=groups,dc=example,dc=com
 | Group Base DN | `COLA_REGISTRY_AUTH_LDAP_GROUP_BASE_DN` | - | (empty) | Base DN for group searches |
 | Group Filter | `COLA_REGISTRY_AUTH_LDAP_GROUP_FILTER` | - | `(member=%s)` | LDAP filter for groups |
 | Required Group | `COLA_REGISTRY_AUTH_LDAP_REQUIRED_GROUP` | - | (empty) | DN of required group |
+
+### Required Maintainers
+
+An opt-in rule that keeps new packages from being created without an owner. It is off by default and independent of the server admins setting.
+
+```bash
+export COLA_REGISTRY_REQUIRE_MAINTAINERS=true   # or --require-maintainers
+```
+
+When it is on:
+
+- Creating a package with `maintainers` missing or empty returns 400.
+- A package PUT with `"maintainers": []` returns 400. A PUT that omits `maintainers` keeps the stored list and is allowed.
+- The 400 message says that the server requires at least one maintainer.
+- Existing packages with empty `maintainers` are left as they are. Under [ADR 0001](docs/adr/0001-role-based-write-access.md) only registry and server admins can change them, until their maintainers are backfilled.
+
+The startup log says `Required maintainers rule is on` or `off`. In the CDT build the variable is `CDT_REGISTRY_REQUIRE_MAINTAINERS`.
+
+Rollout: turn the rule on only once every automated client that creates packages passes maintainers (for CDT, after `release-v2` creates packages with `--maintainer`). Otherwise those clients can no longer create new packages.
 
 ### Storage URI
 

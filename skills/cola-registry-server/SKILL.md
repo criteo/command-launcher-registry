@@ -93,6 +93,14 @@ These additional LDAP settings are available only via environment variables:
 | `--auth-custom-jwt-script` | `COLA_REGISTRY_AUTH_CUSTOM_JWT_SCRIPT` | _(empty)_ | Path to external JWT validator script |
 | `--auth-custom-jwt-required-group` | `COLA_REGISTRY_AUTH_CUSTOM_JWT_REQUIRED_GROUP` | _(empty)_ | Required group claim for authorization |
 
+### Required Maintainers
+
+| Flag | Env Var | Default | Description |
+|------|---------|---------|-------------|
+| `--require-maintainers` | `COLA_REGISTRY_REQUIRE_MAINTAINERS` | `false` | Reject a package with no maintainers (400) |
+
+Opt-in and independent of the server admins setting. When on, creating a package with `maintainers` missing or empty returns 400, and so does a package PUT with `"maintainers": []`. A PUT that omits `maintainers` keeps the stored list and is allowed. The 400 message says the server requires at least one maintainer. Existing packages with empty `maintainers` are left as they are (admin-only under ADR 0001) until they are backfilled. The startup log line `Required maintainers rule is on|off` shows the setting. In the CDT build the variable is `CDT_REGISTRY_REQUIRE_MAINTAINERS`.
+
 ## Storage URIs
 
 | Scheme | Example | Description |
@@ -181,6 +189,11 @@ Base path: `/api/v1`
 ### Descriptions
 
 - Maximum 4096 characters
+
+### Maintainers (with `--require-maintainers`)
+
+- Package create: `maintainers` must list at least one principal
+- Package PUT: `"maintainers": []` is rejected; omitting `maintainers` keeps the stored list
 
 ## Authentication Types
 

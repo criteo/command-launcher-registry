@@ -389,6 +389,11 @@ paths:
         Requires registry admin of this registry (or server admin) when role
         enforcement is on. The caller sets `maintainers`; it is not added to
         the list implicitly.
+
+        When the server runs with the required-maintainers rule
+        (`COLA_REGISTRY_REQUIRE_MAINTAINERS` / `--require-maintainers`, off by
+        default), `maintainers` missing or empty returns 400 with a message
+        saying that the server requires at least one maintainer.
       operationId: createPackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -461,6 +466,13 @@ paths:
         `description`, `custom_values` and `maintainers`, so maintainers add
         and remove co-maintainers themselves. A package with an empty
         `maintainers` list can be changed only by registry and server admins.
+
+        When the server runs with the required-maintainers rule
+        (`COLA_REGISTRY_REQUIRE_MAINTAINERS` / `--require-maintainers`, off by
+        default), `"maintainers": []` returns 400 with a message saying that
+        the server requires at least one maintainer. Omitting `maintainers`
+        keeps the stored list and is allowed, also for an existing package
+        whose list is empty.
       operationId: updatePackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -915,6 +927,8 @@ components:
             publish and delete its versions. Registry admins of its registry
             and server admins hold the role too. An empty list leaves the
             package to them. The creator is not added implicitly.
+            With the server's required-maintainers rule on, missing or empty
+            is rejected with 400.
           items:
             $ref: '#/components/schemas/Principal'
           example: ['team-build']
@@ -945,6 +959,8 @@ components:
             and server admins hold the role too. An empty list leaves the
             package to them. The creator is not added implicitly.
             Present: replaces the list (`[]` clears it); absent: kept.
+            With the server's required-maintainers rule on, `[]` is rejected
+            with 400.
           items:
             $ref: '#/components/schemas/Principal'
         custom_values:
