@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/criteo/command-launcher-registry/internal/principal"
 )
 
 var (
@@ -153,12 +155,30 @@ func ValidateCustomValues(customValues map[string]string) error {
 	return nil
 }
 
+// ValidatePrincipals validates each element of a role list (admins or
+// maintainers): it must be non-empty and contain no comma and no whitespace.
+// The error names the field and the offending element.
+func ValidatePrincipals(field string, principals []string) error {
+	for _, p := range principals {
+		if err := principal.Validate(p); err != nil {
+			return &ValidationError{
+				Field:   field,
+				Message: fmt.Sprintf("%s element %q %s (one user or group per element)", field, p, err),
+			}
+		}
+	}
+	return nil
+}
+
 // ValidateRegistry validates a registry
 func ValidateRegistry(r *Registry) error {
 	if err := ValidateName(r.Name); err != nil {
 		return err
 	}
 	if err := ValidateDescription(r.Description); err != nil {
+		return err
+	}
+	if err := ValidatePrincipals("admins", r.Admins); err != nil {
 		return err
 	}
 	if err := ValidateCustomValues(r.CustomValues); err != nil {
@@ -173,6 +193,9 @@ func ValidatePackage(p *Package) error {
 		return err
 	}
 	if err := ValidateDescription(p.Description); err != nil {
+		return err
+	}
+	if err := ValidatePrincipals("maintainers", p.Maintainers); err != nil {
 		return err
 	}
 	if err := ValidateCustomValues(p.CustomValues); err != nil {

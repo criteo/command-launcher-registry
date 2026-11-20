@@ -77,12 +77,12 @@ func init() {
 
 	// Create flags
 	registryCreateCmd.Flags().StringVar(&regDescription, "description", "", "Registry description")
-	registryCreateCmd.Flags().StringSliceVar(&regAdmins, "admin", []string{}, "Admin email (repeatable)")
+	registryCreateCmd.Flags().StringArrayVar(&regAdmins, "admin", nil, "Admin: user or group (repeatable; comma or space separated)")
 	registryCreateCmd.Flags().StringSliceVar(&regCustomValues, "custom-value", []string{}, "Custom key=value (repeatable)")
 
 	// Update flags
 	registryUpdateCmd.Flags().StringVar(&regDescription, "description", "", "Registry description")
-	registryUpdateCmd.Flags().StringSliceVar(&regAdmins, "admin", []string{}, "Admin email (repeatable, replaces all)")
+	registryUpdateCmd.Flags().StringArrayVar(&regAdmins, "admin", nil, "Admin: user or group (repeatable; comma or space separated; replaces all)")
 	registryUpdateCmd.Flags().StringSliceVar(&regCustomValues, "custom-value", []string{}, "Custom key=value (repeatable, replaces all)")
 	registryUpdateCmd.Flags().BoolVar(&regClearAdmins, "clear-admins", false, "Clear all admins")
 	registryUpdateCmd.Flags().BoolVar(&regClearCustomVal, "clear-custom-values", false, "Clear all custom values")
@@ -125,7 +125,7 @@ func runRegistryCreate(cmd *cobra.Command, args []string) {
 		reqBody["description"] = regDescription
 	}
 	if len(regAdmins) > 0 {
-		reqBody["admins"] = regAdmins
+		reqBody["admins"] = parsePrincipalFlag("admin", regAdmins)
 	}
 	if len(customValues) > 0 {
 		reqBody["custom_values"] = customValues
@@ -273,7 +273,7 @@ func runRegistryUpdate(cmd *cobra.Command, args []string) {
 	if regClearAdmins {
 		reqBody["admins"] = []string{}
 	} else if len(regAdmins) > 0 {
-		reqBody["admins"] = regAdmins
+		reqBody["admins"] = parsePrincipalFlag("admin", regAdmins)
 	}
 	if regClearCustomVal {
 		reqBody["custom_values"] = map[string]string{}

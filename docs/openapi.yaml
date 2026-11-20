@@ -648,6 +648,17 @@ components:
         team: platform
         slack_channel: '#build-tools'
 
+    Principal:
+      type: string
+      description: |
+        A user or group: a username or a group name. One principal per array
+        element: an element must be non-empty and contain no comma and no
+        whitespace, otherwise the request fails with 400 naming the field and
+        the element.
+      minLength: 1
+      pattern: '^[^,\s]+$'
+      example: team-build
+
     Registry:
       type: object
       required:
@@ -665,9 +676,9 @@ components:
           example: Build tools registry
         admins:
           type: array
-          description: List of admin usernames (informational only, not enforced in v1)
+          description: Registry admins, as user or group principals (informational only, not enforced in v1)
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['admin', 'team-build']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
@@ -703,9 +714,9 @@ components:
           example: Build tools registry
         admins:
           type: array
-          description: List of admin usernames (informational only, not enforced in v1)
+          description: Registry admins, as user or group principals (informational only, not enforced in v1)
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['admin']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
@@ -719,8 +730,9 @@ components:
           example: Updated description
         admins:
           type: array
+          description: Registry admins, as user or group principals
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
         custom_values:
           $ref: '#/components/schemas/CustomValues'
 
@@ -741,9 +753,9 @@ components:
           example: Hotfix deployment tool
         maintainers:
           type: array
-          description: List of maintainer usernames (informational only, not enforced in v1)
+          description: Package maintainers, as user or group principals (informational only, not enforced in v1)
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['team-build']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
@@ -766,7 +778,6 @@ components:
       type: object
       required:
         - name
-        - maintainers
       properties:
         name:
           type: string
@@ -780,9 +791,9 @@ components:
           example: Hotfix deployment tool
         maintainers:
           type: array
-          description: List of maintainer usernames (informational only, not enforced in v1)
+          description: Package maintainers, as user or group principals (informational only, not enforced in v1)
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['team-build']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
