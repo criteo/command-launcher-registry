@@ -12,6 +12,7 @@ package principal
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -51,4 +52,15 @@ func Validate(p string) error {
 
 func isSeparator(r rune) bool {
 	return r == ',' || unicode.IsSpace(r)
+}
+
+// Matches reports whether any principal in list equals username or one of
+// groups. Comparison is exact and case-sensitive (ADR 0001).
+func Matches(list []string, username string, groups []string) bool {
+	for _, p := range list {
+		if p == username || slices.Contains(groups, p) {
+			return true
+		}
+	}
+	return false
 }

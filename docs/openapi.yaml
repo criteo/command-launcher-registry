@@ -105,7 +105,8 @@ paths:
         - Authentication
       summary: Get authenticated user identity
       description: |
-        Returns the username of the currently authenticated user.
+        Returns the username of the currently authenticated user and whether
+        the caller is a server admin (`server_admin`).
         This endpoint requires authentication and is used by the CLI to verify credentials
         during login and to check current authentication status.
 
@@ -122,11 +123,21 @@ paths:
                 type: object
                 required:
                   - username
+                  - server_admin
                 properties:
                   username:
                     type: string
                     description: Username of the authenticated user
                     example: admin
+                  server_admin:
+                    type: boolean
+                    description: |
+                      True when role enforcement is on and the caller's username or one of
+                      its groups is in the server-admin list (`COLA_REGISTRY_ADMINS` or the
+                      `--admins` server flag; the variable name follows the branding prefix,
+                      e.g. `CDT_REGISTRY_ADMINS`). Enforcement is on when that list is
+                      non-empty and the auth type is not `none`; otherwise always false.
+                    example: false
         '401':
           description: Authentication required or invalid credentials
           headers:

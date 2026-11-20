@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/criteo/command-launcher-registry/internal/branding"
+	"github.com/criteo/command-launcher-registry/internal/principal"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
 
@@ -16,6 +17,12 @@ type Config struct {
 	Storage StorageConfig `mapstructure:"storage"`
 	Auth    AuthConfig    `mapstructure:"auth"`
 	Logging LoggingConfig `mapstructure:"logging"`
+
+	// Admins lists the server admins (ADR 0001): usernames or groups, parsed
+	// from the "admins" setting (comma- and/or whitespace-separated). A
+	// non-empty list turns role enforcement on unless auth type is "none";
+	// see RolesEnforced.
+	Admins []string `mapstructure:"-"`
 }
 
 // ServerConfig holds server-specific configuration
@@ -86,6 +93,7 @@ func Load() (*Config, error) {
 	v.SetDefault("auth.ldap.required_group", "")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+	v.SetDefault("admins", "")
 
 	// Bind environment variables with prefix derived from branding (e.g., COLA_REGISTRY_)
 	v.SetEnvPrefix(branding.EnvPrefix())
@@ -97,6 +105,7 @@ func Load() (*Config, error) {
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+	cfg.Admins = principal.ParseList(v.GetString("admins"))
 
 	return &cfg, nil
 }
@@ -109,6 +118,7 @@ func LoadWithViper(v *viper.Viper) (*Config, error) {
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+	cfg.Admins = principal.ParseList(v.GetString("admins"))
 
 	return &cfg, nil
 }
@@ -134,6 +144,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("auth.ldap.required_group", "")
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
+	v.SetDefault("admins", "")
 
 	// Bind environment variables with prefix derived from branding (e.g., COLA_REGISTRY_)
 	v.SetEnvPrefix(branding.EnvPrefix())
@@ -174,6 +185,12 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// RolesEnforced reports whether the server enforces roles: the server-admin
+// list is non-empty and authentication is on (auth type is not "none").
+func (c *Config) RolesEnforced() bool {
+	return len(c.Admins) > 0 && c.Auth.Type != "none"
 }
 
 // GetParsedStorageURI returns the parsed storage URI

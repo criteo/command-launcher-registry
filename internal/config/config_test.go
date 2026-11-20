@@ -3,7 +3,10 @@ package config
 import (
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/criteo/command-launcher-registry/internal/branding"
 )
 
 func TestMaskToken(t *testing.T) {
@@ -107,6 +110,113 @@ func TestValidate_StorageURI(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+// loadAdmins builds the viper instance for the app named appName (which sets
+// the env var prefix), binds an "--admins" flag as the server command does,
+// sets the flag when flag is non-nil, and returns the loaded Admins.
+func loadAdmins(t *testing.T, appName string, flag *string) []string {
+	t.Helper()
+	branding.Init(appName)
+	t.Cleanup(func() { branding.Init("cola-registry") })
+
+	v := NewViper()
+	cmd := &cobra.Command{}
+	cmd.Flags().String("admins", "", "")
+	if err := v.BindPFlag("admins", cmd.Flags().Lookup("admins")); err != nil {
+		t.Fatalf("bind flag: %v", err)
+	}
+	if flag != nil {
+		if err := cmd.Flags().Set("admins", *flag); err != nil {
+			t.Fatalf("set flag: %v", err)
+		}
+	}
+
+	cfg, err := LoadWithViper(v)
+	if err != nil {
+		t.Fatalf("LoadWithViper: %v", err)
+	}
+	return cfg.Admins
+}
+
+func TestAdmins_Precedence(t *testing.T) {
+	flag := func(s string) *string { return &s }
+	tests := []struct {
+		name    string
+		appName string
+		env     map[string]string
+		flag    *string
+		want    []string
+	}{
+		{name: "default is empty", appName: "cola-registry", want: nil},
+		{
+			name: "env", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_ADMINS": "alice"},
+			want: []string{"alice"},
+		},
+		{
+			name: "flag beats env", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_ADMINS": "alice"},
+			flag: flag("bob"),
+			want: []string{"bob"},
+		},
+		{
+			name: "list parses commas and spaces", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_ADMINS": "alice, team-build ops"},
+			want: []string{"alice", "team-build", "ops"},
+		},
+		{
+			name: "flag list parses commas and spaces", appName: "cola-registry",
+			flag: flag("alice, team-build ops"),
+			want: []string{"alice", "team-build", "ops"},
+		},
+		{
+			name: "CDT prefix", appName: "cdt-registry",
+			env:  map[string]string{"CDT_REGISTRY_ADMINS": "gu-cdt-maintainer svc-jenkins"},
+			want: []string{"gu-cdt-maintainer", "svc-jenkins"},
+		},
+		{
+			name: "CDT build ignores the COLA variable", appName: "cdt-registry",
+			env:  map[string]string{"COLA_REGISTRY_ADMINS": "alice"},
+			want: nil,
+		},
+		{
+			name: "COLA build ignores the CDT variable", appName: "cola-registry",
+			env:  map[string]string{"CDT_REGISTRY_ADMINS": "alice"},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear both names so the caller's environment cannot leak in.
+			t.Setenv("COLA_REGISTRY_ADMINS", "")
+			t.Setenv("CDT_REGISTRY_ADMINS", "")
+			for k, val := range tt.env {
+				t.Setenv(k, val)
+			}
+			assert.Equal(t, tt.want, loadAdmins(t, tt.appName, tt.flag))
+		})
+	}
+}
+
+func TestRolesEnforced(t *testing.T) {
+	tests := []struct {
+		name     string
+		admins   []string
+		authType string
+		want     bool
+	}{
+		{"admins and auth", []string{"alice"}, "custom_jwt", true},
+		{"admins and basic auth", []string{"alice"}, "basic", true},
+		{"no admins", nil, "custom_jwt", false},
+		{"auth none", []string{"alice"}, "none", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Admins: tt.admins, Auth: AuthConfig{Type: tt.authType}}
+			assert.Equal(t, tt.want, cfg.RolesEnforced())
 		})
 	}
 }

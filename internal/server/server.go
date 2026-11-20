@@ -110,7 +110,7 @@ func (s *Server) Shutdown() error {
 // middleware and every API handler, wired to the given store and
 // authenticator. Start serves it; tests can drive it in-process
 // (see the servertest package). cfg carries the settings that shape the
-// wiring; none does yet.
+// wiring: the server-admin list, in force only when cfg.RolesEnforced().
 func NewHandler(cfg *config.Config, logger *slog.Logger, store storage.Store, authenticator auth.Authenticator) http.Handler {
 	indexHandler := handlers.NewIndexHandler(store, logger)
 	registryHandler := handlers.NewRegistryHandler(store, logger)
@@ -118,7 +118,7 @@ func NewHandler(cfg *config.Config, logger *slog.Logger, store storage.Store, au
 	versionHandler := handlers.NewVersionHandler(store, logger)
 	healthHandler := handlers.NewHealthHandler(store, logger)
 	metricsHandler := handlers.NewMetricsHandler(logger)
-	whoamiHandler := handlers.NewWhoamiHandler(authenticator, logger)
+	whoamiHandler := handlers.NewWhoamiHandler(authenticator, serverAdmins(cfg), logger)
 
 	requireAuth := middleware.RequireAuth(authenticator)
 
@@ -182,4 +182,13 @@ func NewHandler(cfg *config.Config, logger *slog.Logger, store storage.Store, au
 	})
 
 	return router
+}
+
+// serverAdmins returns the server-admin list in force: cfg.Admins when role
+// enforcement is on, nil otherwise.
+func serverAdmins(cfg *config.Config) []string {
+	if !cfg.RolesEnforced() {
+		return nil
+	}
+	return cfg.Admins
 }

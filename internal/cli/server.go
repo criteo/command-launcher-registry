@@ -68,6 +68,7 @@ func SetupFlags() {
 	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", fmt.Sprintf("LDAP base DN for user searches (or %s)", ev("AUTH_LDAP_USER_BASE_DN")))
 	ServerCmd.Flags().String("auth-custom-jwt-script", "", fmt.Sprintf("Path to JWT validator script (or %s)", ev("AUTH_CUSTOM_JWT_SCRIPT")))
 	ServerCmd.Flags().String("auth-custom-jwt-required-group", "", fmt.Sprintf("Required group for authorization (or %s)", ev("AUTH_CUSTOM_JWT_REQUIRED_GROUP")))
+	ServerCmd.Flags().String("admins", "", fmt.Sprintf("Server admins: users or groups, comma or space separated; a non-empty list turns role enforcement on (or %s)", ev("ADMINS")))
 
 	// Bind CLI flags to viper
 	v.BindPFlag("storage.uri", ServerCmd.Flags().Lookup("storage-uri"))
@@ -83,6 +84,7 @@ func SetupFlags() {
 	v.BindPFlag("auth.ldap.user_base_dn", ServerCmd.Flags().Lookup("auth-ldap-user-base-dn"))
 	v.BindPFlag("auth.custom_jwt.script", ServerCmd.Flags().Lookup("auth-custom-jwt-script"))
 	v.BindPFlag("auth.custom_jwt.required_group", ServerCmd.Flags().Lookup("auth-custom-jwt-required-group"))
+	v.BindPFlag("admins", ServerCmd.Flags().Lookup("admins"))
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
@@ -104,6 +106,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 
 	// Log effective configuration at startup (with masked token)
 	logEffectiveConfig(cfg, logger)
+	logRoleSettings(cfg, logger)
 
 	// Parse storage URI
 	storageURI, err := cfg.GetParsedStorageURI()
@@ -201,4 +204,28 @@ func logEffectiveConfig(cfg *config.Config, logger *slog.Logger) {
 		"auth_type", cfg.Auth.Type,
 		"auth_users_file", cfg.Auth.UsersFile,
 	)
+}
+
+// logRoleSettings logs whether role enforcement is on and the server-admin
+// list, and warns when the list is set but auth type "none" makes the
+// server ignore it.
+func logRoleSettings(cfg *config.Config, logger *slog.Logger) {
+	admins := cfg.Admins
+	if admins == nil {
+		admins = []string{}
+	}
+	msg := "Role enforcement is off"
+	if cfg.RolesEnforced() {
+		msg = "Role enforcement is on"
+	}
+	logger.Info(msg,
+		"enforced", cfg.RolesEnforced(),
+		"server_admins", admins,
+		"auth_type", cfg.Auth.Type,
+	)
+	if len(cfg.Admins) > 0 && cfg.Auth.Type == "none" {
+		logger.Warn("Server admins are set but auth.type is none: roles are ignored and every write is allowed",
+			"server_admins", admins,
+		)
+	}
 }

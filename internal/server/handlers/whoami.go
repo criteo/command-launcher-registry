@@ -6,18 +6,23 @@ import (
 	"net/http"
 
 	"github.com/criteo/command-launcher-registry/internal/auth"
+	"github.com/criteo/command-launcher-registry/internal/principal"
 )
 
 // WhoamiHandler handles whoami requests
 type WhoamiHandler struct {
 	authenticator auth.Authenticator
+	serverAdmins  []string
 	logger        *slog.Logger
 }
 
-// NewWhoamiHandler creates a new whoami handler
-func NewWhoamiHandler(authenticator auth.Authenticator, logger *slog.Logger) *WhoamiHandler {
+// NewWhoamiHandler creates a new whoami handler. serverAdmins is the
+// server-admin list in force: nil or empty when role enforcement is off, so
+// that nobody is reported as a server admin.
+func NewWhoamiHandler(authenticator auth.Authenticator, serverAdmins []string, logger *slog.Logger) *WhoamiHandler {
 	return &WhoamiHandler{
 		authenticator: authenticator,
+		serverAdmins:  serverAdmins,
 		logger:        logger,
 	}
 }
@@ -26,6 +31,9 @@ func NewWhoamiHandler(authenticator auth.Authenticator, logger *slog.Logger) *Wh
 type WhoamiResponse struct {
 	Username string   `json:"username"`
 	Groups   []string `json:"groups,omitempty"`
+	// ServerAdmin is true when role enforcement is on and the caller's
+	// username or one of its groups is a server admin.
+	ServerAdmin bool `json:"server_admin"`
 }
 
 // GetWhoami handles GET /api/v1/whoami
@@ -42,8 +50,9 @@ func (h *WhoamiHandler) GetWhoami(w http.ResponseWriter, r *http.Request) {
 
 	// Return the authenticated user info
 	response := WhoamiResponse{
-		Username: user.Username,
-		Groups:   user.Groups,
+		Username:    user.Username,
+		Groups:      user.Groups,
+		ServerAdmin: principal.Matches(h.serverAdmins, user.Username, user.Groups),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -62,3 +62,28 @@ func TestParseListOutputIsValid(t *testing.T) {
 		}
 	}
 }
+
+func TestMatches(t *testing.T) {
+	list := []string{"alice", "team-build"}
+	tests := []struct {
+		name     string
+		list     []string
+		username string
+		groups   []string
+		want     bool
+	}{
+		{"username", list, "alice", nil, true},
+		{"group", list, "bob", []string{"ops", "team-build"}, true},
+		{"no match", list, "bob", []string{"ops"}, false},
+		{"case-sensitive", list, "Alice", []string{"Team-Build"}, false},
+		{"group name is not a username", list, "team-build-x", []string{"team"}, false},
+		{"empty list", nil, "alice", []string{"team-build"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Matches(tt.list, tt.username, tt.groups); got != tt.want {
+				t.Errorf("Matches(%q, %q, %q) = %v, want %v", tt.list, tt.username, tt.groups, got, tt.want)
+			}
+		})
+	}
+}
