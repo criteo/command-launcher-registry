@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/criteo/command-launcher-registry/internal/client/errors"
 	"github.com/criteo/command-launcher-registry/internal/client/output"
@@ -15,7 +16,8 @@ import (
 var (
 	// Version command flags
 	versionChecksum     string
-	versionURL          string
+	versionDownloadURL  string
+	versionManifestPath string
 	versionStartPart    int
 	versionEndPart      int
 	versionStartPartSet bool
@@ -49,6 +51,13 @@ var versionGetCmd = &cobra.Command{
 	Run:   runVersionGet,
 }
 
+var versionManifestCmd = &cobra.Command{
+	Use:   "manifest <registry> <package> <version>",
+	Short: "Get the canonical JSON manifest for a version",
+	Args:  cobra.ExactArgs(3),
+	Run:   runVersionManifest,
+}
+
 var versionDeleteCmd = &cobra.Command{
 	Use:   "delete <registry> <package> <version>",
 	Short: "Delete a version",
@@ -61,17 +70,19 @@ func init() {
 	versionCmd.AddCommand(versionCreateCmd)
 	versionCmd.AddCommand(versionListCmd)
 	versionCmd.AddCommand(versionGetCmd)
+	versionCmd.AddCommand(versionManifestCmd)
 	versionCmd.AddCommand(versionDeleteCmd)
 
 	// Create flags
 	versionCreateCmd.Flags().StringVar(&versionChecksum, "checksum", "", "SHA256 checksum (64 hex characters) (required)")
-	versionCreateCmd.Flags().StringVar(&versionURL, "url", "", "Download URL (required)")
+	versionCreateCmd.Flags().StringVar(&versionDownloadURL, "download-url", "", "Package download URL (required)")
+	versionCreateCmd.Flags().StringVar(&versionManifestPath, "manifest", "", "Path to a version manifest in JSON or YAML format")
 	versionCreateCmd.Flags().IntVar(&versionStartPart, "start-partition", 0, "Start partition")
 	versionCreateCmd.Flags().IntVar(&versionEndPart, "end-partition", 9, "End partition")
 
 	// Mark required flags
 	versionCreateCmd.MarkFlagRequired("checksum")
-	versionCreateCmd.MarkFlagRequired("url")
+	versionCreateCmd.MarkFlagRequired("download-url")
 
 	rootCmd.AddCommand(versionCmd)
 }
@@ -121,9 +132,17 @@ func runVersionCreate(cmd *cobra.Command, args []string) {
 		"name":           packageName,
 		"version":        versionName,
 		"checksum":       versionChecksum,
-		"url":            versionURL,
+		"url":            versionDownloadURL,
 		"startPartition": versionStartPart,
 		"endPartition":   versionEndPart,
+	}
+
+	if versionManifestPath != "" {
+		manifestBytes, err := os.ReadFile(versionManifestPath)
+		if err != nil {
+			errors.ExitWithError(err, "failed to read manifest file")
+		}
+		reqBody["manifest"] = string(manifestBytes)
 	}
 
 	resp, err := c.Post(fmt.Sprintf("/api/v1/registry/%s/package/%s/version", registryName, packageName), reqBody)
@@ -146,6 +165,46 @@ func runVersionCreate(cmd *cobra.Command, args []string) {
 	} else {
 		output.PrintSuccess(fmt.Sprintf("Created version '%s' for package '%s' in registry '%s'", versionName, packageName, registryName))
 	}
+}
+
+func runVersionManifest(cmd *cobra.Command, args []string) {
+	registryName := args[0]
+	packageName := args[1]
+	versionName := args[2]
+	c := getAuthenticatedClient()
+
+	resp, err := c.Get(fmt.Sprintf("/api/v1/registry/%s/package/%s/version/%s/manifest", registryName, packageName, versionName))
+	if err != nil {
+		errors.ExitWithError(err, "failed to get manifest")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		errors.HandleHTTPError(resp.StatusCode, fmt.Sprintf("failed to get manifest: %s", string(body)))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		errors.ExitWithError(err, "failed to read response")
+	}
+
+	if flagJSON {
+		fmt.Printf("%s\n", string(body))
+		return
+	}
+
+	var formatted json.RawMessage
+	if err := json.Unmarshal(body, &formatted); err != nil {
+		errors.ExitWithError(err, "failed to parse manifest response")
+	}
+
+	pretty, err := json.MarshalIndent(formatted, "", "  ")
+	if err != nil {
+		errors.ExitWithError(err, "failed to format manifest response")
+	}
+
+	fmt.Printf("%s\n", string(pretty))
 }
 
 func runVersionList(cmd *cobra.Command, args []string) {

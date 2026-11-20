@@ -226,6 +226,66 @@ func (fs *FileStorage) GetRegistryIndex(ctx context.Context, registryName string
 	return fs.BaseStorage.GetRegistryIndex(ctx, registryName)
 }
 
+// PutManifest stores a canonical JSON manifest blob if it does not already exist.
+func (fs *FileStorage) PutManifest(ctx context.Context, digest string, content []byte) error {
+	manifestPath := manifestPathForFile(fs.filePath, digest)
+	if _, err := os.Stat(manifestPath); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat manifest file: %w", err)
+	}
+
+	dir := filepath.Dir(manifestPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create manifest directory: %w", err)
+	}
+
+	tempFile, err := os.CreateTemp(dir, ".manifest-*.json.tmp")
+	if err != nil {
+		return fmt.Errorf("failed to create manifest temp file: %w", err)
+	}
+	tempPath := tempFile.Name()
+	defer func() {
+		if tempFile != nil {
+			tempFile.Close()
+			os.Remove(tempPath)
+		}
+	}()
+
+	if _, err := tempFile.Write(content); err != nil {
+		return fmt.Errorf("failed to write manifest temp file: %w", err)
+	}
+	if err := tempFile.Sync(); err != nil {
+		return fmt.Errorf("failed to sync manifest temp file: %w", err)
+	}
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("failed to close manifest temp file: %w", err)
+	}
+	tempFile = nil
+
+	if err := os.Rename(tempPath, manifestPath); err != nil {
+		if _, statErr := os.Stat(manifestPath); statErr == nil {
+			return nil
+		}
+		return fmt.Errorf("failed to persist manifest file: %w", err)
+	}
+
+	return nil
+}
+
+// GetManifest retrieves a canonical JSON manifest blob by digest.
+func (fs *FileStorage) GetManifest(ctx context.Context, digest string) ([]byte, error) {
+	manifestPath := manifestPathForFile(fs.filePath, digest)
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrManifestNotFound
+		}
+		return nil, fmt.Errorf("failed to read manifest file: %w", err)
+	}
+	return data, nil
+}
+
 // Close closes the storage (no-op for file storage)
 func (fs *FileStorage) Close() error {
 	return nil

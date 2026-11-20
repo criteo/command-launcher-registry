@@ -44,6 +44,7 @@ type HandlerSet struct {
 	ListVersions  http.HandlerFunc
 	CreateVersion http.HandlerFunc
 	GetVersion    http.HandlerFunc
+	GetManifest   http.HandlerFunc
 	DeleteVersion http.HandlerFunc
 }
 
@@ -238,6 +239,11 @@ func (s *Server) setupRouter() *chi.Mux {
 								// Get version (no auth required)
 								if s.handlers.GetVersion != nil {
 									r.Get("/", s.handlers.GetVersion)
+								}
+
+								// Get manifest (no auth required)
+								if s.handlers.GetManifest != nil {
+									r.Get("/manifest", s.handlers.GetManifest)
 								}
 
 								// Delete version (auth required)
