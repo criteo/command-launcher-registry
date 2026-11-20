@@ -123,10 +123,9 @@ func (h *RegistryHandler) GetRegistry(w http.ResponseWriter, r *http.Request) {
 func (h *RegistryHandler) UpdateRegistry(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "name")
 
-	var registry models.Registry
-
-	// Parse request body
-	if err := json.NewDecoder(r.Body).Decode(&registry); err != nil {
+	// Parse request body: a partial update, absent fields keep their value
+	var update models.RegistryUpdate
+	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		h.logger.Warn("Failed to decode registry update request",
 			"registry", registryName,
 			"error", err,
@@ -135,47 +134,19 @@ func (h *RegistryHandler) UpdateRegistry(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Ensure name in URL matches name in body
-	if registry.Name != registryName {
-		h.logger.Warn("Registry name mismatch",
-			"url_name", registryName,
-			"body_name", registry.Name,
-			"remote_addr", r.RemoteAddr)
-		apierrors.WriteError(w, apierrors.ErrCodeValidationError, "Registry name in URL must match name in body", http.StatusBadRequest, nil)
-		return
-	}
-
-	// Validate registry
-	if err := models.ValidateRegistry(&registry); err != nil {
+	// Validate the fields present (and name, if given, against the URL)
+	if err := update.Validate(registryName); err != nil {
 		h.logger.Warn("Registry validation failed",
-			"name", registry.Name,
+			"name", registryName,
 			"error", err,
 			"remote_addr", r.RemoteAddr)
 		apierrors.WriteError(w, apierrors.ErrCodeValidationError, err.Error(), http.StatusBadRequest, nil)
 		return
 	}
 
-	// Get existing registry to preserve packages
-	existing, err := h.store.GetRegistry(r.Context(), registryName)
+	// Update registry (merged under the storage lock, packages preserved)
+	registry, err := h.store.UpdateRegistry(r.Context(), registryName, &update)
 	if err != nil {
-		if err == storage.ErrNotFound {
-			code, msg, status := apierrors.MapStorageError(err, "registry")
-			apierrors.WriteError(w, code, msg, status, nil)
-			return
-		}
-
-		h.logger.Error("Failed to get existing registry",
-			"registry", registryName,
-			"error", err)
-		apierrors.WriteError(w, apierrors.ErrCodeStorageUnavailable, "Failed to retrieve registry", http.StatusInternalServerError, nil)
-		return
-	}
-
-	// Preserve packages from existing registry
-	registry.Packages = existing.Packages
-
-	// Update registry
-	if err := h.store.UpdateRegistry(r.Context(), &registry); err != nil {
 		if err == storage.ErrNotFound {
 			code, msg, status := apierrors.MapStorageError(err, "registry")
 			apierrors.WriteError(w, code, msg, status, nil)

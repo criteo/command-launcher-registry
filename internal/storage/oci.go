@@ -117,9 +117,9 @@ func (s *OCIStorage) GetRegistry(ctx context.Context, name string) (*models.Regi
 	return s.BaseStorage.GetRegistry(ctx, name)
 }
 
-// UpdateRegistry updates registry metadata
-func (s *OCIStorage) UpdateRegistry(ctx context.Context, r *models.Registry) error {
-	return s.BaseStorage.UpdateRegistry(ctx, r, s.persist)
+// UpdateRegistry applies a partial update to a registry
+func (s *OCIStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate) (*models.Registry, error) {
+	return s.BaseStorage.UpdateRegistry(ctx, name, u, s.persist)
 }
 
 // DeleteRegistry deletes a registry and all its packages (atomic)
@@ -142,9 +142,9 @@ func (s *OCIStorage) GetPackage(ctx context.Context, registryName, packageName s
 	return s.BaseStorage.GetPackage(ctx, registryName, packageName)
 }
 
-// UpdatePackage updates package metadata (preserves versions)
-func (s *OCIStorage) UpdatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return s.BaseStorage.UpdatePackage(ctx, registryName, p, s.persist)
+// UpdatePackage applies a partial update to a package (preserves versions)
+func (s *OCIStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate) (*models.Package, error) {
+	return s.BaseStorage.UpdatePackage(ctx, registryName, packageName, u, s.persist)
 }
 
 // DeletePackage deletes a package and all its versions (atomic)

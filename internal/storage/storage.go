@@ -29,14 +29,18 @@ type Store interface {
 	// Registry operations
 	CreateRegistry(ctx context.Context, r *models.Registry) error
 	GetRegistry(ctx context.Context, name string) (*models.Registry, error)
-	UpdateRegistry(ctx context.Context, r *models.Registry) error
+	// UpdateRegistry applies a partial update to a registry under the storage
+	// lock and returns the updated registry. Packages are preserved.
+	UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate) (*models.Registry, error)
 	DeleteRegistry(ctx context.Context, name string) error
 	ListRegistries(ctx context.Context) ([]*models.Registry, error)
 
 	// Package operations
 	CreatePackage(ctx context.Context, registryName string, p *models.Package) error
 	GetPackage(ctx context.Context, registryName, packageName string) (*models.Package, error)
-	UpdatePackage(ctx context.Context, registryName string, p *models.Package) error
+	// UpdatePackage applies a partial update to a package under the storage
+	// lock and returns the updated package. Versions are preserved.
+	UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate) (*models.Package, error)
 	DeletePackage(ctx context.Context, registryName, packageName string) error
 	ListPackages(ctx context.Context, registryName string) ([]*models.Package, error)
 

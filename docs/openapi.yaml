@@ -275,6 +275,12 @@ paths:
       tags:
         - Registry
       summary: Update registry metadata
+      description: |
+        Partial update. A field present in the body replaces the stored value;
+        an explicit empty value (`""`, `[]`, `{}`) clears it; a field absent
+        from the body (or `null`) keeps the stored value. `name` is optional
+        and, when present, must equal the name in the URL (400 otherwise).
+        Packages are always preserved.
       operationId: updateRegistry
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -405,6 +411,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Package'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+    put:
+      tags:
+        - Package
+      summary: Update package metadata
+      description: |
+        Partial update. A field present in the body replaces the stored value;
+        an explicit empty value (`""`, `[]`, `{}`) clears it; a field absent
+        from the body (or `null`) keeps the stored value. `name` is optional
+        and, when present, must equal the package name in the URL (400
+        otherwise). Versions are always preserved.
+      operationId: updatePackage
+      parameters:
+        - $ref: '#/components/parameters/RegistryName'
+        - $ref: '#/components/parameters/PackageName'
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePackageRequest'
+      responses:
+        '200':
+          description: Package updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -723,7 +769,14 @@ components:
 
     UpdateRegistryRequest:
       type: object
+      description: |
+        Partial update: only the fields present are changed, absent fields keep
+        their stored value, and an empty value clears the field.
       properties:
+        name:
+          type: string
+          description: Optional; must equal the registry name in the URL
+          example: build
         description:
           type: string
           maxLength: 4096
@@ -795,6 +848,28 @@ components:
           items:
             $ref: '#/components/schemas/Principal'
           example: ['team-build']
+        custom_values:
+          $ref: '#/components/schemas/CustomValues'
+
+    UpdatePackageRequest:
+      type: object
+      description: |
+        Partial update: only the fields present are changed, absent fields keep
+        their stored value, and an empty value clears the field.
+      properties:
+        name:
+          type: string
+          description: Optional; must equal the package name in the URL
+          example: hotfix
+        description:
+          type: string
+          maxLength: 4096
+          example: Updated description
+        maintainers:
+          type: array
+          description: Package maintainers, as user or group principals
+          items:
+            $ref: '#/components/schemas/Principal'
         custom_values:
           $ref: '#/components/schemas/CustomValues'
 

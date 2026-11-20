@@ -518,11 +518,11 @@ cola-regctl registry list --json  # JSON output
 # Get registry details
 cola-regctl registry get <name>
 
-# Update registry
+# Update registry (only the flags given change; the rest is kept)
 cola-regctl registry update <name> \
   --description "New description" \
-  --admin "new-admin@example.com" \
-  --clear-admins  # Clear all admins
+  --admin "new-admin@example.com"  # Replaces all admins
+cola-regctl registry update <name> --clear-admins  # Clear all admins
 
 # Delete registry (with confirmation)
 cola-regctl registry delete <name>
@@ -546,11 +546,11 @@ cola-regctl package list <registry> --json
 # Get package details
 cola-regctl package get <registry> <package>
 
-# Update package
+# Update package (only the flags given change; the rest is kept)
 cola-regctl package update <registry> <package> \
   --description "New description" \
-  --maintainer "new@example.com" \
-  --clear-maintainers  # Clear all maintainers
+  --maintainer "new@example.com"  # Replaces all maintainers
+cola-regctl package update <registry> <package> --clear-maintainers  # Clear all maintainers
 
 # Delete package
 cola-regctl package delete <registry> <package>
@@ -691,7 +691,7 @@ This means you can ask your agent things like *"create a registry with two packa
 - `GET /api/v1/registry` - List all registries (auth required)
 - `POST /api/v1/registry` - Create registry (auth required)
 - `GET /api/v1/registry/:name` - Get registry details
-- `PUT /api/v1/registry/:name` - Update registry (auth required)
+- `PUT /api/v1/registry/:name` - Update registry (auth required; partial: fields absent from the body are kept)
 - `DELETE /api/v1/registry/:name` - Delete registry (auth required, cascade)
 - `GET /api/v1/registry/:name/index.json` - Get registry index (CDT format)
 
@@ -699,7 +699,7 @@ This means you can ask your agent things like *"create a registry with two packa
 - `GET /api/v1/registry/:name/package` - List packages
 - `POST /api/v1/registry/:name/package` - Create package (auth required)
 - `GET /api/v1/registry/:name/package/:package` - Get package details
-- `PUT /api/v1/registry/:name/package/:package` - Update package (auth required)
+- `PUT /api/v1/registry/:name/package/:package` - Update package (auth required; partial: fields absent from the body are kept)
 - `DELETE /api/v1/registry/:name/package/:package` - Delete package (auth required, cascade)
 
 #### Versions

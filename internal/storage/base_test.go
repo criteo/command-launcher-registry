@@ -144,19 +144,47 @@ func TestBaseStorage_UpdateRegistry(t *testing.T) {
 	ctx := context.Background()
 
 	// Create registry
-	reg := models.NewRegistry("test-reg", "Test Registry", nil, nil)
+	reg := models.NewRegistry("test-reg", "Test Registry", []string{"alice"}, nil)
 	err := bs.CreateRegistry(ctx, reg, nil)
 	require.NoError(t, err)
 
-	// Update registry
-	updatedReg := models.NewRegistry("test-reg", "Updated Description", nil, nil)
-	err = bs.UpdateRegistry(ctx, updatedReg, nil)
-	assert.NoError(t, err)
+	// Update the description only
+	desc := "Updated Description"
+	updated, err := bs.UpdateRegistry(ctx, "test-reg", &models.RegistryUpdate{Description: &desc}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "Updated Description", updated.Description)
 
-	// Verify update
+	// Verify update; omitted admins are kept
 	retrieved, err := bs.GetRegistry(ctx, "test-reg")
 	require.NoError(t, err)
 	assert.Equal(t, "Updated Description", retrieved.Description)
+	assert.Equal(t, []string{"alice"}, retrieved.Admins)
+
+	// Unknown registry
+	_, err = bs.UpdateRegistry(ctx, "missing", &models.RegistryUpdate{Description: &desc}, nil)
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestBaseStorage_UpdateRollsBackOnPersistFailure(t *testing.T) {
+	bs := newTestBaseStorage()
+	ctx := context.Background()
+	failPersist := func() error { return assert.AnError }
+
+	require.NoError(t, bs.CreateRegistry(ctx, models.NewRegistry("reg", "old", nil, nil), nil))
+	require.NoError(t, bs.CreatePackage(ctx, "reg", models.NewPackage("pkg", "old", nil, nil), nil))
+
+	desc := "new"
+	_, err := bs.UpdateRegistry(ctx, "reg", &models.RegistryUpdate{Description: &desc}, failPersist)
+	assert.ErrorIs(t, err, ErrStorageUnavailable)
+	_, err = bs.UpdatePackage(ctx, "reg", "pkg", &models.PackageUpdate{Description: &desc}, failPersist)
+	assert.ErrorIs(t, err, ErrStorageUnavailable)
+
+	reg, err := bs.GetRegistry(ctx, "reg")
+	require.NoError(t, err)
+	assert.Equal(t, "old", reg.Description)
+	pkg, err := bs.GetPackage(ctx, "reg", "pkg")
+	require.NoError(t, err)
+	assert.Equal(t, "old", pkg.Description)
 }
 
 func TestBaseStorage_DeleteRegistry(t *testing.T) {

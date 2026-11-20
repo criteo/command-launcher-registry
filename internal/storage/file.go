@@ -161,9 +161,9 @@ func (fs *FileStorage) GetRegistry(ctx context.Context, name string) (*models.Re
 	return fs.BaseStorage.GetRegistry(ctx, name)
 }
 
-// UpdateRegistry updates registry metadata
-func (fs *FileStorage) UpdateRegistry(ctx context.Context, r *models.Registry) error {
-	return fs.BaseStorage.UpdateRegistry(ctx, r, fs.persist)
+// UpdateRegistry applies a partial update to a registry
+func (fs *FileStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate) (*models.Registry, error) {
+	return fs.BaseStorage.UpdateRegistry(ctx, name, u, fs.persist)
 }
 
 // DeleteRegistry deletes a registry and all its packages (atomic)
@@ -186,9 +186,9 @@ func (fs *FileStorage) GetPackage(ctx context.Context, registryName, packageName
 	return fs.BaseStorage.GetPackage(ctx, registryName, packageName)
 }
 
-// UpdatePackage updates package metadata (preserves versions)
-func (fs *FileStorage) UpdatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return fs.BaseStorage.UpdatePackage(ctx, registryName, p, fs.persist)
+// UpdatePackage applies a partial update to a package (preserves versions)
+func (fs *FileStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate) (*models.Package, error) {
+	return fs.BaseStorage.UpdatePackage(ctx, registryName, packageName, u, fs.persist)
 }
 
 // DeletePackage deletes a package and all its versions (atomic)

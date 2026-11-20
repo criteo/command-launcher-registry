@@ -138,10 +138,9 @@ func (h *PackageHandler) UpdatePackage(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "name")
 	packageName := chi.URLParam(r, "package")
 
-	var pkg models.Package
-
-	// Parse request body
-	if err := json.NewDecoder(r.Body).Decode(&pkg); err != nil {
+	// Parse request body: a partial update, absent fields keep their value
+	var update models.PackageUpdate
+	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		h.logger.Warn("Failed to decode package update request",
 			"registry", registryName,
 			"package", packageName,
@@ -151,55 +150,20 @@ func (h *PackageHandler) UpdatePackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure name in URL matches name in body
-	if pkg.Name != packageName {
-		h.logger.Warn("Package name mismatch",
-			"url_name", packageName,
-			"body_name", pkg.Name,
-			"remote_addr", r.RemoteAddr)
-		apierrors.WriteError(w, apierrors.ErrCodeValidationError, "Package name in URL must match name in body", http.StatusBadRequest, nil)
-		return
-	}
-
-	// Validate package
-	if err := models.ValidatePackage(&pkg); err != nil {
+	// Validate the fields present (and name, if given, against the URL)
+	if err := update.Validate(packageName); err != nil {
 		h.logger.Warn("Package validation failed",
 			"registry", registryName,
-			"package", pkg.Name,
+			"package", packageName,
 			"error", err,
 			"remote_addr", r.RemoteAddr)
 		apierrors.WriteError(w, apierrors.ErrCodeValidationError, err.Error(), http.StatusBadRequest, nil)
 		return
 	}
 
-	// Get existing package to preserve versions
-	existing, err := h.store.GetPackage(r.Context(), registryName, packageName)
+	// Update package (merged under the storage lock, versions preserved)
+	pkg, err := h.store.UpdatePackage(r.Context(), registryName, packageName, &update)
 	if err != nil {
-		if err == storage.ErrNotFound {
-			// Determine if registry or package not found
-			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {
-				code, msg, status := apierrors.MapStorageError(err, "registry")
-				apierrors.WriteError(w, code, msg, status, nil)
-			} else {
-				code, msg, status := apierrors.MapStorageError(err, "package")
-				apierrors.WriteError(w, code, msg, status, nil)
-			}
-			return
-		}
-
-		h.logger.Error("Failed to get existing package",
-			"registry", registryName,
-			"package", packageName,
-			"error", err)
-		apierrors.WriteError(w, apierrors.ErrCodeStorageUnavailable, "Failed to retrieve package", http.StatusInternalServerError, nil)
-		return
-	}
-
-	// Preserve versions from existing package
-	pkg.Versions = existing.Versions
-
-	// Update package
-	if err := h.store.UpdatePackage(r.Context(), registryName, &pkg); err != nil {
 		if err == storage.ErrNotFound {
 			// Determine if registry or package not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {
