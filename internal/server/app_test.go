@@ -115,3 +115,36 @@ func TestApp_LogsAreCaptured(t *testing.T) {
 	}
 	t.Fatalf("no \"Request completed\" line with status 404; got %s", strings.Join(msgs, ", "))
 }
+
+// TestApp_DuplicateVersionConflict checks that publishing an existing
+// version again is a 409 VERSION_ALREADY_EXISTS, as the API documents, not
+// a 500.
+func TestApp_DuplicateVersionConflict(t *testing.T) {
+	app := servertest.New(t)
+	alice := servertest.User("alice")
+	version := map[string]any{
+		"name":           "hotfix",
+		"version":        "1.0.0",
+		"checksum":       checksum,
+		"url":            "https://example.com/hotfix-1.0.0.zip",
+		"startPartition": 0,
+		"endPartition":   9,
+	}
+	app.Do(alice, http.MethodPost, "/api/v1/registry", map[string]any{"name": "repos"}).
+		WantStatus(t, http.StatusCreated)
+	app.Do(alice, http.MethodPost, "/api/v1/registry/repos/package", map[string]any{"name": "hotfix"}).
+		WantStatus(t, http.StatusCreated)
+	app.Do(alice, http.MethodPost, "/api/v1/registry/repos/package/hotfix/version", version).
+		WantStatus(t, http.StatusCreated)
+
+	var body struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	app.Do(alice, http.MethodPost, "/api/v1/registry/repos/package/hotfix/version", version).
+		WantStatus(t, http.StatusConflict).JSON(t, &body)
+	if body.Error.Code != "VERSION_ALREADY_EXISTS" {
+		t.Errorf("code = %q, want VERSION_ALREADY_EXISTS", body.Error.Code)
+	}
+}

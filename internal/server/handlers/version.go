@@ -70,7 +70,7 @@ func (h *VersionHandler) CreateVersion(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		if err == storage.ErrAlreadyExists {
+		if err == storage.ErrAlreadyExists || err == storage.ErrImmutabilityViolation {
 			code, msg, status := apierrors.MapStorageError(err, "version")
 			apierrors.WriteError(w, code, msg, status, nil)
 			return
