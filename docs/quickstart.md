@@ -249,6 +249,16 @@ export COLA_REGISTRY_TOKEN=admin:admin  # Basic auth (username:password)
 export COLA_REGISTRY_TOKEN=eyJhbGciOiJIUz...  # JWT token
 ```
 
+### Roles
+
+By default any authenticated caller can write. To restrict writes by role, start the server with server admins, users or groups separated by commas or spaces:
+
+```bash
+export COLA_REGISTRY_ADMINS="alice, platform-team"   # CDT build: CDT_REGISTRY_ADMINS; or --admins
+```
+
+Server admins then create and delete registries, a registry's `admins` manage it and its packages, and a package's `maintainers` publish its versions. Others get 403. Check your own access with `./bin/cola-regctl whoami` (`Server admin: yes|no`). See [Roles and write access](../README.md#roles-and-write-access).
+
 ### Create a Registry
 
 ```bash
@@ -264,7 +274,7 @@ export COLA_REGISTRY_TOKEN=eyJhbGciOiJIUz...  # JWT token
 ```bash
 ./bin/cola-regctl package create my-tools deployment-cli \
   --description "Deployment automation tool" \
-  --maintainer "team@example.com"
+  --maintainer "alice, deploy-team"
 ```
 
 ### Publish a Version
@@ -415,3 +425,4 @@ docker-compose up -d
 - [Full Configuration Reference](../README.md#configuration)
 - [API Documentation](./spec.md#api-contract)
 - [CLI Command Reference](../README.md#cli-client-cola-regctl)
+- [Roles and write access](../README.md#roles-and-write-access)

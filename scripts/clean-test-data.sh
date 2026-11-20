@@ -5,6 +5,8 @@
 # This script deletes the test registry and all its packages and versions.
 # It assumes the server is running at http://localhost:8080 and uses basic auth
 # with admin:admin credentials.
+# When the server enforces roles (COLA_REGISTRY_ADMINS is set), the user must be
+# a server admin: only server admins create and delete registries.
 #
 # Usage:
 #   ./scripts/clean-test-data.sh [base_url] [username:password]

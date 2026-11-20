@@ -4,6 +4,8 @@
 #
 # This script deletes the test registry and all its packages and versions.
 # It demonstrates CLI usage and provides a convenient way to clean up test data.
+# When the server enforces roles (COLA_REGISTRY_ADMINS is set), the user must be
+# a server admin: only server admins create and delete registries.
 #
 # Usage:
 #   ./scripts/clean-test-data-cli.sh [server_url] [username:password]

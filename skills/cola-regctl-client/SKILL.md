@@ -1,6 +1,6 @@
 ---
 name: cola-regctl-client
-description: Complete reference for the Command Launcher registry client CLI (regctl). Use when helping users manage registries, packages, and versions, authenticate with a server, or troubleshoot client connectivity. Covers all commands, flags, environment variables, and credential storage.
+description: Complete reference for the Command Launcher registry client CLI (regctl). Use when helping users manage registries, packages, and versions, authenticate with a server, or troubleshoot client connectivity. Covers all commands, flags, environment variables, credential storage, roles (403) and exit codes.
 metadata:
   author: criteo
   version: "1.0.0"
@@ -70,7 +70,14 @@ Removes stored URL and token. Idempotent — succeeds even if no credentials exi
 cola-regctl whoami
 ```
 
-Displays the currently authenticated user and server information.
+Displays the currently authenticated user and server information, and whether the caller is a server admin:
+
+```
+✓ Authenticated to https://registry.example.com as alice
+Server admin: yes
+```
+
+With `--json`: `{"authenticated": true, "server": "...", "server_admin": true, "username": "alice"}` inside the usual `{"success": true, "data": ...}` envelope. `server_admin` is true only when the server enforces roles and lists the caller (or one of its groups) as a server admin. Exits 5 when not authenticated.
 
 ---
 
@@ -85,7 +92,7 @@ cola-regctl registry create <name> [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--description` | string | Registry description |
-| `--admin` | string[] | Admin email address (repeatable) |
+| `--admin` | string[] | Admin: user or group (repeatable; comma or space separated) |
 | `--custom-value` | string[] | Custom metadata as `key=value` (repeatable) |
 
 ### registry list — List all registries
@@ -111,12 +118,12 @@ cola-regctl registry update <name> [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--description` | string | New description |
-| `--admin` | string[] | Admin email (repeatable, replaces all existing admins) |
+| `--admin` | string[] | Admin: user or group (repeatable; comma or space separated; replaces all existing admins) |
 | `--custom-value` | string[] | Custom `key=value` (repeatable, replaces all existing values) |
 | `--clear-admins` | bool | Remove all admins |
 | `--clear-custom-values` | bool | Remove all custom values |
 
-Cannot combine `--clear-admins` with `--admin`, or `--clear-custom-values` with `--custom-value`.
+Only the flags given change; everything else is kept (the server's PUT is partial). To add a co-admin, pass the full new list to `--admin`. Cannot combine `--clear-admins` with `--admin`, or `--clear-custom-values` with `--custom-value`. Needs registry admin when the server enforces roles.
 
 ### registry delete — Delete a registry
 
@@ -139,7 +146,7 @@ cola-regctl package create <registry> <package> [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--description` | string | Package description |
-| `--maintainer` | string[] | Maintainer email (repeatable) |
+| `--maintainer` | string[] | Maintainer: user or group (repeatable; comma or space separated) |
 | `--custom-value` | string[] | Custom `key=value` (repeatable) |
 
 ### package list — List packages in a registry
@@ -165,12 +172,12 @@ cola-regctl package update <registry> <package> [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `--description` | string | New description |
-| `--maintainer` | string[] | Maintainer email (repeatable, replaces all existing) |
+| `--maintainer` | string[] | Maintainer: user or group (repeatable; comma or space separated; replaces all existing) |
 | `--custom-value` | string[] | Custom `key=value` (repeatable, replaces all existing) |
 | `--clear-maintainers` | bool | Remove all maintainers |
 | `--clear-custom-values` | bool | Remove all custom values |
 
-Cannot combine `--clear-maintainers` with `--maintainer`, or `--clear-custom-values` with `--custom-value`.
+Only the flags given change; everything else is kept (the server's PUT is partial). To add a co-maintainer, pass the full new list to `--maintainer`. Cannot combine `--clear-maintainers` with `--maintainer`, or `--clear-custom-values` with `--custom-value`. Needs package maintainer when the server enforces roles.
 
 ### package delete — Delete a package
 
@@ -265,6 +272,44 @@ Prompts for confirmation unless `--yes` is set.
 
 ---
 
+## Roles and Permission Errors
+
+When the server sets server admins (`COLA_REGISTRY_ADMINS`, `CDT_REGISTRY_ADMINS` for the `cdt` build), every write needs a role. Reads never do. Full matrix: ADR 0001 (`docs/adr/0001-role-based-write-access.md`).
+
+| Command | Role needed |
+|---------|-------------|
+| `registry create`, `registry delete` | server admin |
+| `registry update`, `package create`, `package delete` | registry admin (of that registry) |
+| `package update`, `version create`, `version delete` | package maintainer (of that package) |
+
+- A higher role includes the lower ones in its scope: a server admin is registry admin everywhere, a registry admin is maintainer of every package in its registry.
+- `--admin` sets a registry's admins, `--maintainer` a package's maintainers. Values are users or groups, not emails, and match the caller's username or one of its groups exactly. `"alice, team-build ops"` and repeated flags both work; empty entries are dropped, and a flag whose values are all empty is an error (exit 2). The server rejects an element with a comma or whitespace with 400.
+- `package create` does not add the caller to `maintainers`; pass `--maintainer`.
+- Without the role the server answers 403 and the CLI exits 6, printing the server's message:
+
+```
+Error: failed to update package: {"error":{"code":"FORBIDDEN","message":"requires package maintainer on my-tools/my-cli","details":{"required_role":"package maintainer","target":"my-tools/my-cli"}}}
+```
+
+- Without valid credentials the server answers 401 and the CLI exits 5 and suggests `login`.
+- Check your access with `whoami` (`Server admin: yes|no`).
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error (network failure, server 5xx) |
+| 2 | Invalid arguments, or HTTP 400 |
+| 3 | Not found (404) |
+| 4 | Conflict (409), e.g. already exists |
+| 5 | Authentication error (401) |
+| 6 | Permission denied (403): missing role |
+
+---
+
 ## Credential Storage
 
 Credentials are stored per-platform in the `~/.config/cola-registry/` directory.
@@ -299,7 +344,7 @@ Create a registry with metadata:
 ```bash
 cola-regctl registry create my-tools \
   --description "Internal CLI tools" \
-  --admin ops@example.com \
+  --admin "alice, ops-team" \
   --custom-value env=production
 ```
 
@@ -310,6 +355,11 @@ cola-regctl version create my-tools my-cli 2.1.0 \
   --url https://artifacts.example.com/my-cli-2.1.0.tar.gz \
   --start-partition 0 \
   --end-partition 0
+```
+
+Add a co-maintainer (as a maintainer of the package; the list replaces the old one):
+```bash
+cola-regctl package update my-tools my-cli --maintainer "alice, my-team, bob"
 ```
 
 Delete with auto-confirm:

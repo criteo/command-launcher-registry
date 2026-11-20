@@ -5,6 +5,8 @@
 # This script creates a sample registry with packages and versions for testing.
 # It assumes the server is running at http://localhost:8080 and uses basic auth
 # with admin:admin credentials.
+# When the server enforces roles (COLA_REGISTRY_ADMINS is set), the user must be
+# a server admin: only server admins create and delete registries.
 #
 # Usage:
 #   ./scripts/populate-test-data.sh [base_url] [username:password]
@@ -48,7 +50,7 @@ echo "Creating registry 'company-tools'..."
 api_call POST "/registry" '{
   "name": "company-tools",
   "description": "Company internal tools registry",
-  "admins": ["admin@example.com"],
+  "admins": ["admin", "platform-admins"],
   "custom_values": {
     "team": "platform",
     "owner": "devops"
@@ -61,7 +63,7 @@ echo "Creating package 'deployment-cli'..."
 api_call POST "/registry/company-tools/package" '{
   "name": "deployment-cli",
   "description": "CLI tool for deploying applications",
-  "maintainers": ["deploy-team@example.com"],
+  "maintainers": ["deploy-team"],
   "custom_values": {
     "language": "go",
     "repo": "https://github.com/company/deployment-cli"
@@ -97,7 +99,7 @@ echo "Creating package 'data-sync'..."
 api_call POST "/registry/company-tools/package" '{
   "name": "data-sync",
   "description": "Data synchronization utility",
-  "maintainers": ["data-team@example.com"],
+  "maintainers": ["data-team"],
   "custom_values": {
     "language": "python",
     "repo": "https://github.com/company/data-sync"
@@ -122,7 +124,7 @@ echo "Creating package 'monitoring-agent'..."
 api_call POST "/registry/company-tools/package" '{
   "name": "monitoring-agent",
   "description": "System monitoring agent",
-  "maintainers": ["sre-team@example.com"]
+  "maintainers": ["sre-team"]
 }' | jq '.'
 echo
 

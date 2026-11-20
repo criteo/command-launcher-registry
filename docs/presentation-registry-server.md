@@ -109,13 +109,13 @@ Registry server for managing and distributing CLI tools with pluggable storage b
 Registry (Organization/Team Level)
   ├── name: "devops-tools"
   ├── description: "DevOps CLI tools"
-  ├── admins: ["admin@company.com"]
+  ├── admins: ["alice", "devops-team"]       # registry admins
   ├── custom_values: {"env": "production"}
   │
   └── Package (Tool Level)
         ├── name: "deployer"
         ├── description: "Deployment automation CLI"
-        ├── maintainers: ["dev@company.com"]
+        ├── maintainers: ["bob", "deploy-team"]  # package maintainers
         │
         └── Version (Release Level)
               ├── version: "1.2.0"
@@ -346,7 +346,7 @@ All backends share this pattern - only `persistFn` differs
 └── registry/:name/package/:pkg/version/:v GET DELETE 🔒
 ```
 
-🔒 = Requires Authentication (write operations only)
+🔒 = Requires Authentication (write operations only), plus a role when role enforcement is on
 
 ---
 
@@ -358,7 +358,7 @@ All backends share this pattern - only `persistFn` differs
 curl -X POST http://localhost:8080/api/v1/registry -u admin:password \
   -H "Content-Type: application/json" \
   -d '{"name": "devops-tools", "description": "DevOps CLI tools",
-       "admins": ["admin@company.com"], "custom_values": {"env": "prod"}}'
+       "admins": ["alice", "devops-team"], "custom_values": {"env": "prod"}}'
 ```
 
 ## Get Registry Index (Command Launcher Format)
@@ -380,7 +380,7 @@ curl http://localhost:8080/api/v1/registry/devops-tools/index.json
 curl -X POST http://localhost:8080/api/v1/registry/devops-tools/package -u admin:password \
   -H "Content-Type: application/json" \
   -d '{"name": "deployer", "description": "K8s deployment automation",
-       "maintainers": ["dev@company.com"]}'
+       "maintainers": ["bob", "deploy-team"]}'
 ```
 
 ## Publish Version
@@ -403,11 +403,11 @@ curl -X POST http://localhost:8080/api/v1/registry/devops-tools/package/deployer
 users:
   - username: admin
     password: "$2a$10$N9qo8uLOickgx2ZMRZoMy..."  # bcrypt hash
-    roles: ["admin"]  # Reserved for future RBAC
   - username: deployer
     password: "$2a$10$Qz3RG3yLOickgx2ZMRZoMy..."
-    roles: ["publisher"]
 ```
+
+Roles are not set here: they come from `COLA_REGISTRY_ADMINS` and the `admins` / `maintainers` lists (see Role-Based Write Access).
 
 ### Generate Password Hash
 ```bash
@@ -452,6 +452,23 @@ func (a *BasicAuthenticator) Authenticate(ctx, user, pass string) (string, error
     return user, nil
 }
 ```
+
+---
+
+# Role-Based Write Access
+
+Opt-in: on when `COLA_REGISTRY_ADMINS` (or `--admins`) lists at least one user or group.
+
+| Role | Granted by | Can |
+|------|-----------|-----|
+| Server admin | `COLA_REGISTRY_ADMINS` | Create/delete registries; registry admin everywhere |
+| Registry admin | registry `admins` | Update the registry, create/delete its packages; maintainer of all of them |
+| Package maintainer | package `maintainers` | Update the package, publish/delete its versions |
+
+- Principal = username or group (`custom_jwt` reports groups; `basic`/`ldap` match the username)
+- Reads stay public · no credentials → 401 · missing role → 403 `FORBIDDEN` ("requires registry admin on devops-tools")
+- One `Write audit` line per write (caller, action, target, decision), always logged whatever `logging.level`
+- Full matrix: [ADR 0001](./adr/0001-role-based-write-access.md)
 
 ---
 
@@ -711,9 +728,9 @@ spec:
 
 ### Security
 - 🔜 OIDC/SSO Authentication
-- 🔜 Role-Based Access Control (RBAC)
+- ✅ Role-based write access (server admin, registry admin, package maintainer)
+- ✅ Audit logging of writes (stdout)
 - 🔜 API Key authentication
-- 🔜 Audit logging
 
 ### Storage
 - 🔜 Azure Blob Storage backend
