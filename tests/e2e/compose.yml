@@ -49,7 +49,9 @@ services:
       - server
       - --auth-type=custom_jwt
       - --auth-custom-jwt-script=/e2e/auth/verify_jwt.sh
-      - --log-level=debug # must win over CDT_REGISTRY_LOGGING_LEVEL below
+      # Must win over CDT_REGISTRY_LOGGING_LEVEL below. A scenario can
+      # recreate the server with E2E_LOG_LEVEL=warn to check audit lines.
+      - --log-level=${E2E_LOG_LEVEL-debug}
     environment:
       CDT_REGISTRY_STORAGE_URI: s3+http://minio:9000/cdt-registry/registry.json
       CDT_REGISTRY_STORAGE_TOKEN: e2e-access:e2e-secret-key

@@ -1,7 +1,7 @@
 // Package servertest runs the whole registry server in-process for tests.
 //
 // New builds the real application handler (server.NewHandler) over file
-// storage in a temp dir, a test authenticator and a logger that writes JSON
+// storage in a temp dir, a test authenticator and loggers that write JSON
 // lines to a buffer. Requests go straight to the handler, no network:
 //
 //	app := servertest.New(t)
@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -47,7 +46,9 @@ type App struct {
 }
 
 // New starts the app with file storage in t.TempDir(), the test
-// authenticator and a debug-level JSON logger captured by Logs.
+// authenticator and JSON loggers captured by Logs: the server logger at
+// Config.Logging.Level ("debug" by default) and the audit logger, which
+// ignores the level, as the server command builds them.
 //
 // The default config has auth type "custom_jwt", the only real
 // authenticator that reports groups. Each configure function may change the
@@ -67,7 +68,8 @@ func New(t testing.TB, configure ...func(*config.Config)) *App {
 	}
 
 	logs := &syncBuffer{}
-	logger := slog.New(slog.NewJSONHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := server.NewLogger(logs, cfg.Logging.Level, "json")
+	auditLogger := server.NewAuditLogger(logs, "json")
 
 	uri, err := cfg.GetParsedStorageURI()
 	if err != nil {
@@ -89,7 +91,7 @@ func New(t testing.TB, configure ...func(*config.Config)) *App {
 	}
 
 	return &App{
-		Handler: server.NewHandler(cfg, logger, store, authenticator),
+		Handler: server.NewHandler(cfg, logger, auditLogger, store, authenticator),
 		Config:  cfg,
 		Store:   store,
 		t:       t,

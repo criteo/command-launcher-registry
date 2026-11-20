@@ -101,8 +101,10 @@ func runServer(cmd *cobra.Command, args []string) error {
 		os.Exit(ExitCodeInvalidConfig)
 	}
 
-	// Create logger
-	logger := server.NewLogger(cfg.Logging.Level, cfg.Logging.Format)
+	// Create loggers: the audit logger ignores the log level, so write
+	// audit lines are always visible.
+	logger := server.NewLogger(os.Stdout, cfg.Logging.Level, cfg.Logging.Format)
+	auditLogger := server.NewAuditLogger(os.Stdout, cfg.Logging.Format)
 
 	// Log effective configuration at startup (with masked token)
 	logEffectiveConfig(cfg, logger)
@@ -166,7 +168,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create server
-	srv := server.NewServer(cfg, logger, store, authenticator)
+	srv := server.NewServer(cfg, logger, auditLogger, store, authenticator)
 
 	// Start server
 	logger.Info("Server ready to accept connections",

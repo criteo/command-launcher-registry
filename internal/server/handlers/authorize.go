@@ -20,9 +20,11 @@ type Authorizer struct {
 
 // NewAuthorizer creates an authorizer. serverAdmins is the server-admin
 // list in force: nil or empty when role enforcement is off, and then every
-// write is allowed (and still audited).
-func NewAuthorizer(serverAdmins []string, logger *slog.Logger) *Authorizer {
-	return &Authorizer{serverAdmins: serverAdmins, logger: logger}
+// write is allowed (and still audited). auditLogger receives the audit
+// lines at Info; the server gives it one that ignores the configured log
+// level (server.NewAuditLogger), so they are always visible.
+func NewAuthorizer(serverAdmins []string, auditLogger *slog.Logger) *Authorizer {
+	return &Authorizer{serverAdmins: serverAdmins, logger: auditLogger}
 }
 
 // Guard returns the storage guard for action on target by the caller that

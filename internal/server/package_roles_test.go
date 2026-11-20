@@ -477,7 +477,7 @@ func TestApp_PackageRoleCheckedUnderStorageLock(t *testing.T) {
 		"hotfix": {Name: "hotfix", Maintainers: []string{"maint"}, Versions: map[string]*models.Version{}},
 	}}
 	reads := &atomic.Int32{}
-	app.Handler = server.NewHandler(app.Config, slog.New(slog.NewTextHandler(io.Discard, nil)),
+	app.Handler = server.NewHandler(app.Config, slog.New(slog.NewTextHandler(io.Discard, nil)), slog.New(slog.NewTextHandler(io.Discard, nil)),
 		staleReads{Store: app.Store, stale: stale, reads: reads}, servertest.Authenticator{})
 
 	app.Do(maintainer, http.MethodPut, "/api/v1/registry/repos/package/hotfix",

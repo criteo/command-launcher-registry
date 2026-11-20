@@ -23,16 +23,19 @@ import (
 type Server struct {
 	config        *config.Config
 	logger        *slog.Logger
+	auditLogger   *slog.Logger
 	store         storage.Store
 	authenticator auth.Authenticator
 	httpServer    *http.Server
 }
 
-// NewServer creates a new server instance
-func NewServer(cfg *config.Config, logger *slog.Logger, store storage.Store, authenticator auth.Authenticator) *Server {
+// NewServer creates a new server instance. auditLogger receives the write
+// audit lines (see NewAuditLogger); logger everything else.
+func NewServer(cfg *config.Config, logger, auditLogger *slog.Logger, store storage.Store, authenticator auth.Authenticator) *Server {
 	return &Server{
 		config:        cfg,
 		logger:        logger,
+		auditLogger:   auditLogger,
 		store:         store,
 		authenticator: authenticator,
 	}
@@ -41,7 +44,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger, store storage.Store, aut
 // Start starts the HTTP server
 func (s *Server) Start() error {
 	// Build the application handler
-	router := NewHandler(s.config, s.logger, s.store, s.authenticator)
+	router := NewHandler(s.config, s.logger, s.auditLogger, s.store, s.authenticator)
 
 	// Create HTTP server
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
@@ -111,9 +114,10 @@ func (s *Server) Shutdown() error {
 // authenticator. Start serves it; tests can drive it in-process
 // (see the servertest package). cfg carries the settings that shape the
 // wiring: the server-admin list, in force only when cfg.RolesEnforced().
-func NewHandler(cfg *config.Config, logger *slog.Logger, store storage.Store, authenticator auth.Authenticator) http.Handler {
+// The write audit lines go to auditLogger, everything else to logger.
+func NewHandler(cfg *config.Config, logger, auditLogger *slog.Logger, store storage.Store, authenticator auth.Authenticator) http.Handler {
 	indexHandler := handlers.NewIndexHandler(store, logger)
-	authorizer := handlers.NewAuthorizer(serverAdmins(cfg), logger)
+	authorizer := handlers.NewAuthorizer(serverAdmins(cfg), auditLogger)
 	registryHandler := handlers.NewRegistryHandler(store, authorizer, logger)
 	packageHandler := handlers.NewPackageHandler(store, authorizer, logger)
 	versionHandler := handlers.NewVersionHandler(store, authorizer, logger)

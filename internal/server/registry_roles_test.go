@@ -413,7 +413,7 @@ func TestApp_RoleCheckedUnderStorageLock(t *testing.T) {
 
 	stale := &models.Registry{Name: "repos", Description: "original", Admins: []string{"repo-admin"}, Packages: map[string]*models.Package{}}
 	reads := &atomic.Int32{}
-	app.Handler = server.NewHandler(app.Config, slog.New(slog.NewTextHandler(io.Discard, nil)),
+	app.Handler = server.NewHandler(app.Config, slog.New(slog.NewTextHandler(io.Discard, nil)), slog.New(slog.NewTextHandler(io.Discard, nil)),
 		staleReads{Store: app.Store, stale: stale, reads: reads}, servertest.Authenticator{})
 
 	// The stale read path is wired in: GET shows repo-admin as admin.
