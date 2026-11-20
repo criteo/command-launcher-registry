@@ -220,3 +220,110 @@ func TestRolesEnforced(t *testing.T) {
 		})
 	}
 }
+
+// loadRequireMaintainers builds the viper instance for the app named appName,
+// binds a "--require-maintainers" flag as the server command does, sets the
+// flag when flag is non-nil, and returns the loaded RequireMaintainers.
+func loadRequireMaintainers(t *testing.T, appName string, flag *string) (bool, error) {
+	t.Helper()
+	branding.Init(appName)
+	t.Cleanup(func() { branding.Init("cola-registry") })
+
+	v := NewViper()
+	cmd := &cobra.Command{}
+	cmd.Flags().Bool("require-maintainers", false, "")
+	if err := v.BindPFlag("require_maintainers", cmd.Flags().Lookup("require-maintainers")); err != nil {
+		t.Fatalf("bind flag: %v", err)
+	}
+	if flag != nil {
+		if err := cmd.Flags().Set("require-maintainers", *flag); err != nil {
+			t.Fatalf("set flag: %v", err)
+		}
+	}
+
+	cfg, err := LoadWithViper(v)
+	if err != nil {
+		return false, err
+	}
+	return cfg.RequireMaintainers, nil
+}
+
+func TestRequireMaintainers_Precedence(t *testing.T) {
+	flag := func(s string) *string { return &s }
+	tests := []struct {
+		name    string
+		appName string
+		env     map[string]string
+		flag    *string
+		want    bool
+		wantErr bool
+	}{
+		{name: "default is off", appName: "cola-registry", want: false},
+		{
+			name: "env on", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_REQUIRE_MAINTAINERS": "true"},
+			want: true,
+		},
+		{
+			name: "env off", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_REQUIRE_MAINTAINERS": "false"},
+			want: false,
+		},
+		{name: "flag on", appName: "cola-registry", flag: flag("true"), want: true},
+		{
+			name: "flag off beats env on", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_REQUIRE_MAINTAINERS": "true"},
+			flag: flag("false"),
+			want: false,
+		},
+		{
+			name: "flag on beats env off", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_REQUIRE_MAINTAINERS": "false"},
+			flag: flag("true"),
+			want: true,
+		},
+		{
+			name: "independent of admins", appName: "cola-registry",
+			env:  map[string]string{"COLA_REGISTRY_ADMINS": "alice"},
+			want: false,
+		},
+		{
+			name: "CDT prefix", appName: "cdt-registry",
+			env:  map[string]string{"CDT_REGISTRY_REQUIRE_MAINTAINERS": "true"},
+			want: true,
+		},
+		{
+			name: "CDT build ignores the COLA variable", appName: "cdt-registry",
+			env:  map[string]string{"COLA_REGISTRY_REQUIRE_MAINTAINERS": "true"},
+			want: false,
+		},
+		{
+			name: "COLA build ignores the CDT variable", appName: "cola-registry",
+			env:  map[string]string{"CDT_REGISTRY_REQUIRE_MAINTAINERS": "true"},
+			want: false,
+		},
+		{
+			name: "invalid env value is an error", appName: "cola-registry",
+			env:     map[string]string{"COLA_REGISTRY_REQUIRE_MAINTAINERS": "maybe"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear every name so the caller's environment cannot leak in.
+			for _, k := range []string{"COLA_REGISTRY_REQUIRE_MAINTAINERS", "CDT_REGISTRY_REQUIRE_MAINTAINERS", "COLA_REGISTRY_ADMINS", "CDT_REGISTRY_ADMINS"} {
+				t.Setenv(k, "")
+			}
+			for k, val := range tt.env {
+				t.Setenv(k, val)
+			}
+			got, err := loadRequireMaintainers(t, tt.appName, tt.flag)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

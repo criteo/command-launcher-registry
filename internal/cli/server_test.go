@@ -120,3 +120,63 @@ func TestLogRoleSettings(t *testing.T) {
 		})
 	}
 }
+
+func TestServerFlags_RequireMaintainers(t *testing.T) {
+	setupServerFlags()
+
+	flag := ServerCmd.Flags().Lookup("require-maintainers")
+	if flag == nil {
+		t.Fatal("server command has no --require-maintainers flag")
+	}
+	if !strings.Contains(flag.Usage, "COLA_REGISTRY_REQUIRE_MAINTAINERS") {
+		t.Errorf("--require-maintainers help = %q, want it to name COLA_REGISTRY_REQUIRE_MAINTAINERS", flag.Usage)
+	}
+
+	load := func() bool {
+		t.Helper()
+		cfg, err := config.LoadWithViper(v)
+		if err != nil {
+			t.Fatalf("LoadWithViper: %v", err)
+		}
+		return cfg.RequireMaintainers
+	}
+
+	// The steps run in order: once the flag is set it stays set.
+	t.Setenv("COLA_REGISTRY_REQUIRE_MAINTAINERS", "")
+	if load() {
+		t.Error("default require_maintainers = true, want false")
+	}
+
+	t.Setenv("COLA_REGISTRY_REQUIRE_MAINTAINERS", "true")
+	if !load() {
+		t.Error("require_maintainers from env = false, want true")
+	}
+
+	if err := ServerCmd.Flags().Set("require-maintainers", "false"); err != nil {
+		t.Fatalf("set --require-maintainers: %v", err)
+	}
+	if load() {
+		t.Error("require_maintainers with --require-maintainers=false and env true = true, want the flag's false")
+	}
+}
+
+func TestLogRequireMaintainers(t *testing.T) {
+	for _, on := range []bool{true, false} {
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+
+		logRequireMaintainers(&config.Config{RequireMaintainers: on}, logger)
+
+		var line map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+			t.Fatalf("decode log line %q: %v", buf.String(), err)
+		}
+		wantMsg := "Required maintainers rule is off"
+		if on {
+			wantMsg = "Required maintainers rule is on"
+		}
+		if line["level"] != "INFO" || !strings.HasPrefix(line["msg"].(string), wantMsg) || line["require_maintainers"] != on {
+			t.Errorf("on=%v: log line = %v, want INFO %q with require_maintainers=%v", on, line, wantMsg, on)
+		}
+	}
+}

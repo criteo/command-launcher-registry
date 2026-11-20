@@ -113,13 +113,14 @@ func (s *Server) Shutdown() error {
 // middleware and every API handler, wired to the given store and
 // authenticator. Start serves it; tests can drive it in-process
 // (see the servertest package). cfg carries the settings that shape the
-// wiring: the server-admin list, in force only when cfg.RolesEnforced().
+// wiring: the server-admin list, in force only when cfg.RolesEnforced(),
+// and the required-maintainers rule (cfg.RequireMaintainers).
 // The write audit lines go to auditLogger, everything else to logger.
 func NewHandler(cfg *config.Config, logger, auditLogger *slog.Logger, store storage.Store, authenticator auth.Authenticator) http.Handler {
 	indexHandler := handlers.NewIndexHandler(store, logger)
 	authorizer := handlers.NewAuthorizer(serverAdmins(cfg), auditLogger)
 	registryHandler := handlers.NewRegistryHandler(store, authorizer, logger)
-	packageHandler := handlers.NewPackageHandler(store, authorizer, logger)
+	packageHandler := handlers.NewPackageHandler(store, authorizer, cfg.RequireMaintainers, logger)
 	versionHandler := handlers.NewVersionHandler(store, authorizer, logger)
 	healthHandler := handlers.NewHealthHandler(store, logger)
 	metricsHandler := handlers.NewMetricsHandler(logger)

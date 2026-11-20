@@ -68,6 +68,7 @@ func SetupFlags() {
 	ServerCmd.Flags().String("auth-ldap-user-base-dn", "", fmt.Sprintf("LDAP base DN for user searches (or %s)", ev("AUTH_LDAP_USER_BASE_DN")))
 	ServerCmd.Flags().String("auth-custom-jwt-script", "", fmt.Sprintf("Path to JWT validator script (or %s)", ev("AUTH_CUSTOM_JWT_SCRIPT")))
 	ServerCmd.Flags().String("auth-custom-jwt-required-group", "", fmt.Sprintf("Required group for authorization (or %s)", ev("AUTH_CUSTOM_JWT_REQUIRED_GROUP")))
+	ServerCmd.Flags().Bool("require-maintainers", false, fmt.Sprintf("Reject packages created or updated with no maintainers (or %s)", ev("REQUIRE_MAINTAINERS")))
 	ServerCmd.Flags().String("admins", "", fmt.Sprintf("Server admins: users or groups, comma or space separated; a non-empty list turns role enforcement on (or %s)", ev("ADMINS")))
 
 	// Bind CLI flags to viper
@@ -85,6 +86,7 @@ func SetupFlags() {
 	v.BindPFlag("auth.custom_jwt.script", ServerCmd.Flags().Lookup("auth-custom-jwt-script"))
 	v.BindPFlag("auth.custom_jwt.required_group", ServerCmd.Flags().Lookup("auth-custom-jwt-required-group"))
 	v.BindPFlag("admins", ServerCmd.Flags().Lookup("admins"))
+	v.BindPFlag("require_maintainers", ServerCmd.Flags().Lookup("require-maintainers"))
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
@@ -109,6 +111,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	// Log effective configuration at startup (with masked token)
 	logEffectiveConfig(cfg, logger)
 	logRoleSettings(cfg, logger)
+	logRequireMaintainers(cfg, logger)
 
 	// Parse storage URI
 	storageURI, err := cfg.GetParsedStorageURI()
@@ -230,4 +233,13 @@ func logRoleSettings(cfg *config.Config, logger *slog.Logger) {
 			"server_admins", admins,
 		)
 	}
+}
+
+// logRequireMaintainers logs whether the required-maintainers rule is on.
+func logRequireMaintainers(cfg *config.Config, logger *slog.Logger) {
+	msg := "Required maintainers rule is off"
+	if cfg.RequireMaintainers {
+		msg = "Required maintainers rule is on: new packages and package updates need at least one maintainer"
+	}
+	logger.Info(msg, "require_maintainers", cfg.RequireMaintainers)
 }

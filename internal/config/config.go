@@ -23,6 +23,11 @@ type Config struct {
 	// non-empty list turns role enforcement on unless auth type is "none";
 	// see RolesEnforced.
 	Admins []string `mapstructure:"-"`
+
+	// RequireMaintainers, when true, makes the server reject a package
+	// create with missing or empty maintainers and a package PUT that sets
+	// maintainers to []. Independent of Admins; off by default.
+	RequireMaintainers bool `mapstructure:"require_maintainers"`
 }
 
 // ServerConfig holds server-specific configuration
@@ -94,6 +99,7 @@ func Load() (*Config, error) {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("admins", "")
+	v.SetDefault("require_maintainers", false)
 
 	// Bind environment variables with prefix derived from branding (e.g., COLA_REGISTRY_)
 	v.SetEnvPrefix(branding.EnvPrefix())
@@ -145,6 +151,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("admins", "")
+	v.SetDefault("require_maintainers", false)
 
 	// Bind environment variables with prefix derived from branding (e.g., COLA_REGISTRY_)
 	v.SetEnvPrefix(branding.EnvPrefix())

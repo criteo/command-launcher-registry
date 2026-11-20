@@ -16,19 +16,23 @@ import (
 
 // PackageHandler handles package CRUD operations. Each write is checked
 // against the caller's roles by the authorizer's guard, under the storage
-// lock.
+// lock. With requireMaintainers on, a write that leaves a package with no
+// maintainers is rejected with 400.
 type PackageHandler struct {
-	store      storage.Store
-	authorizer *Authorizer
-	logger     *slog.Logger
+	store              storage.Store
+	authorizer         *Authorizer
+	requireMaintainers bool
+	logger             *slog.Logger
 }
 
-// NewPackageHandler creates a new package handler
-func NewPackageHandler(store storage.Store, authorizer *Authorizer, logger *slog.Logger) *PackageHandler {
+// NewPackageHandler creates a new package handler. requireMaintainers turns
+// on the required-maintainers rule (setting require_maintainers).
+func NewPackageHandler(store storage.Store, authorizer *Authorizer, requireMaintainers bool, logger *slog.Logger) *PackageHandler {
 	return &PackageHandler{
-		store:      store,
-		authorizer: authorizer,
-		logger:     logger,
+		store:              store,
+		authorizer:         authorizer,
+		requireMaintainers: requireMaintainers,
+		logger:             logger,
 	}
 }
 
@@ -48,8 +52,12 @@ func (h *PackageHandler) CreatePackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate package
-	if err := models.ValidatePackage(&pkg); err != nil {
+	// Validate package, and the required-maintainers rule when it is on
+	err := models.ValidatePackage(&pkg)
+	if err == nil && h.requireMaintainers {
+		err = models.ValidateRequiredMaintainers(pkg.Maintainers)
+	}
+	if err != nil {
 		h.logger.Warn("Package validation failed",
 			"registry", registryName,
 			"package", pkg.Name,
@@ -163,8 +171,14 @@ func (h *PackageHandler) UpdatePackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the fields present (and name, if given, against the URL)
-	if err := update.Validate(packageName); err != nil {
+	// Validate the fields present (and name, if given, against the URL).
+	// With the required-maintainers rule on, maintainers may not be set to
+	// []; omitting them keeps the stored list and is allowed.
+	err := update.Validate(packageName)
+	if err == nil && h.requireMaintainers && update.Maintainers != nil {
+		err = models.ValidateRequiredMaintainers(*update.Maintainers)
+	}
+	if err != nil {
 		h.logger.Warn("Package validation failed",
 			"registry", registryName,
 			"package", packageName,

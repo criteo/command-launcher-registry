@@ -66,6 +66,9 @@ services:
       # Server admins (ticket 06) turn role enforcement on. A scenario can
       # recreate the server with E2E_ADMINS= (empty) to check enforcement off.
       CDT_REGISTRY_ADMINS: ${E2E_ADMINS-g-e2e-server-admins}
+      # Required-maintainers rule (ticket 12), off by default. A scenario can
+      # recreate the server with E2E_REQUIRE_MAINTAINERS=true to turn it on.
+      CDT_REGISTRY_REQUIRE_MAINTAINERS: ${E2E_REQUIRE_MAINTAINERS-false}
     volumes:
       - ./auth:/e2e/auth:ro
     ports:

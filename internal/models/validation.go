@@ -33,6 +33,16 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("validation error on field '%s': %s", e.Field, e.Message)
 }
 
+// ValidateRequiredMaintainers checks the opt-in required-maintainers rule
+// (setting require_maintainers): maintainers must not be empty. Callers
+// apply it only when the setting is on and the write sets maintainers.
+func ValidateRequiredMaintainers(maintainers []string) error {
+	if len(maintainers) == 0 {
+		return &ValidationError{Field: "maintainers", Message: "the server requires at least one maintainer"}
+	}
+	return nil
+}
+
 // ValidateName validates registry or package name
 func ValidateName(name string) error {
 	if len(name) == 0 {
