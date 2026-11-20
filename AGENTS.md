@@ -160,6 +160,11 @@ The CLI prioritizes user experience:
 4. **Update documentation**: Update relevant docs (README, OpenAPI)
 5. **Check formatting**: Run `make fmt` before committing
 
+### Changelog and Release Notes
+
+- **Every user-visible change** (API, CLI, configuration, behaviour, docs users read) adds a line to the top section of `CHANGELOG.md` (the next release, marked `Unreleased`) in the same commit as the change.
+- **Before tagging**, write or update `docs/release-notes/<version>.md`; `docs/release-notes/README.md` gives the steps and how to publish it as the GitHub release body.
+
 ### Adding Features
 
 - **Start with the API**: Define the API contract first (OpenAPI)
