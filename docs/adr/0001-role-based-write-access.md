@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Role-based write access: server admin, registry admin, package maintainer

@@ -34,7 +34,7 @@ Role-based write access (ADR 0001). Read the [release notes](docs/release-notes/
 
 - README "Roles and write access", quickstart, agent skills, presentations and test-data scripts use usernames and groups instead of emails.
 - Agent Skills documentation ([#17](https://github.com/criteo/command-launcher-registry/pull/17)).
-- ADR 0001 (role-based write access) and the glossary ([#22](https://github.com/criteo/command-launcher-registry/pull/22)).
+- ADR 0001 (role-based write access) and the glossary ([#22](https://github.com/criteo/command-launcher-registry/pull/22)). The ADR is now marked accepted.
 - This changelog and `docs/release-notes/`.
 
 ## [0.5.0-alpha] - 2026-04-01
