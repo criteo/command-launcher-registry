@@ -14,38 +14,10 @@ import (
 
 	"github.com/criteo/command-launcher-registry/internal/auth"
 	"github.com/criteo/command-launcher-registry/internal/config"
+	"github.com/criteo/command-launcher-registry/internal/server/handlers"
 	"github.com/criteo/command-launcher-registry/internal/server/middleware"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
-
-// HandlerSet contains all HTTP handlers
-type HandlerSet struct {
-	IndexGet     http.HandlerFunc
-	IndexOptions http.HandlerFunc
-	Health       http.HandlerFunc
-	Metrics      http.HandlerFunc
-	Whoami       http.HandlerFunc
-
-	// Registry handlers
-	ListRegistries http.HandlerFunc
-	CreateRegistry http.HandlerFunc
-	GetRegistry    http.HandlerFunc
-	UpdateRegistry http.HandlerFunc
-	DeleteRegistry http.HandlerFunc
-
-	// Package handlers
-	ListPackages  http.HandlerFunc
-	CreatePackage http.HandlerFunc
-	GetPackage    http.HandlerFunc
-	UpdatePackage http.HandlerFunc
-	DeletePackage http.HandlerFunc
-
-	// Version handlers
-	ListVersions  http.HandlerFunc
-	CreateVersion http.HandlerFunc
-	GetVersion    http.HandlerFunc
-	DeleteVersion http.HandlerFunc
-}
 
 // Server represents the HTTP server
 type Server struct {
@@ -54,7 +26,6 @@ type Server struct {
 	store         storage.Store
 	authenticator auth.Authenticator
 	httpServer    *http.Server
-	handlers      HandlerSet
 }
 
 // NewServer creates a new server instance
@@ -69,8 +40,8 @@ func NewServer(cfg *config.Config, logger *slog.Logger, store storage.Store, aut
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	// Create router
-	router := s.setupRouter()
+	// Build the application handler
+	router := NewHandler(s.config, s.logger, s.store, s.authenticator)
 
 	// Create HTTP server
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
@@ -135,115 +106,73 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-// setupRouter configures the HTTP router with middleware and routes
-func (s *Server) setupRouter() *chi.Mux {
+// NewHandler returns the complete application HTTP handler: router,
+// middleware and every API handler, wired to the given store and
+// authenticator. Start serves it; tests can drive it in-process
+// (see the servertest package). cfg carries the settings that shape the
+// wiring; none does yet.
+func NewHandler(cfg *config.Config, logger *slog.Logger, store storage.Store, authenticator auth.Authenticator) http.Handler {
+	indexHandler := handlers.NewIndexHandler(store, logger)
+	registryHandler := handlers.NewRegistryHandler(store, logger)
+	packageHandler := handlers.NewPackageHandler(store, logger)
+	versionHandler := handlers.NewVersionHandler(store, logger)
+	healthHandler := handlers.NewHealthHandler(store, logger)
+	metricsHandler := handlers.NewMetricsHandler(logger)
+	whoamiHandler := handlers.NewWhoamiHandler(authenticator, logger)
+
+	requireAuth := middleware.RequireAuth(authenticator)
+
 	router := chi.NewRouter()
 
 	// Global middleware (applied to all routes)
-	router.Use(middleware.Logging(s.logger))
+	router.Use(middleware.Logging(logger))
 	router.Use(middleware.NewRateLimiter(100)) // 100 req/min per IP
 	router.Use(middleware.CORS())
 
 	// API v1 routes
 	router.Route("/api/v1", func(r chi.Router) {
 		// Health and metrics endpoints (no auth required)
-		if s.handlers.Health != nil {
-			r.Get("/health", s.handlers.Health)
-		}
-		if s.handlers.Metrics != nil {
-			r.Get("/metrics", s.handlers.Metrics)
-		}
+		r.Get("/health", healthHandler.GetHealth)
+		r.Get("/metrics", metricsHandler.GetMetrics)
 
-		// Whoami endpoint (auth required)
-		if s.handlers.Whoami != nil {
-			r.Get("/whoami", s.handlers.Whoami)
-		}
+		// Whoami endpoint (the handler authenticates the caller itself)
+		r.Get("/whoami", whoamiHandler.GetWhoami)
 
 		// Registry index endpoint (no auth required for GET)
-		r.Get("/registry/{name}/index.json", s.serveIndexPlaceholder)
-		r.Options("/registry/{name}/index.json", s.handleOptionsPlaceholder)
+		r.Get("/registry/{name}/index.json", indexHandler.GetIndex)
+		r.Options("/registry/{name}/index.json", indexHandler.HandleOptions)
 
-		// Registry endpoints
+		// Registry endpoints. RequireAuth only gates POST, PUT and DELETE.
 		r.Route("/registry", func(r chi.Router) {
-			// List registries (auth required)
-			if s.handlers.ListRegistries != nil {
-				r.With(middleware.RequireAuth(s.authenticator)).Get("/", s.handlers.ListRegistries)
-			}
-
-			// Create registry (auth required)
-			if s.handlers.CreateRegistry != nil {
-				r.With(middleware.RequireAuth(s.authenticator)).Post("/", s.handlers.CreateRegistry)
-			}
+			r.With(requireAuth).Get("/", registryHandler.ListRegistries)
+			r.With(requireAuth).Post("/", registryHandler.CreateRegistry)
 
 			// Single registry operations
 			r.Route("/{name}", func(r chi.Router) {
-				// Get registry (no auth required)
-				if s.handlers.GetRegistry != nil {
-					r.Get("/", s.handlers.GetRegistry)
-				}
-
-				// Update registry (auth required)
-				if s.handlers.UpdateRegistry != nil {
-					r.With(middleware.RequireAuth(s.authenticator)).Put("/", s.handlers.UpdateRegistry)
-				}
-
-				// Delete registry (auth required)
-				if s.handlers.DeleteRegistry != nil {
-					r.With(middleware.RequireAuth(s.authenticator)).Delete("/", s.handlers.DeleteRegistry)
-				}
+				r.Get("/", registryHandler.GetRegistry)
+				r.With(requireAuth).Put("/", registryHandler.UpdateRegistry)
+				r.With(requireAuth).Delete("/", registryHandler.DeleteRegistry)
 
 				// Package endpoints
 				r.Route("/package", func(r chi.Router) {
-					// List packages (no auth required)
-					if s.handlers.ListPackages != nil {
-						r.Get("/", s.handlers.ListPackages)
-					}
-
-					// Create package (auth required)
-					if s.handlers.CreatePackage != nil {
-						r.With(middleware.RequireAuth(s.authenticator)).Post("/", s.handlers.CreatePackage)
-					}
+					r.Get("/", packageHandler.ListPackages)
+					r.With(requireAuth).Post("/", packageHandler.CreatePackage)
 
 					// Single package operations
 					r.Route("/{package}", func(r chi.Router) {
-						// Get package (no auth required)
-						if s.handlers.GetPackage != nil {
-							r.Get("/", s.handlers.GetPackage)
-						}
-
-						// Update package (auth required)
-						if s.handlers.UpdatePackage != nil {
-							r.With(middleware.RequireAuth(s.authenticator)).Put("/", s.handlers.UpdatePackage)
-						}
-
-						// Delete package (auth required)
-						if s.handlers.DeletePackage != nil {
-							r.With(middleware.RequireAuth(s.authenticator)).Delete("/", s.handlers.DeletePackage)
-						}
+						r.Get("/", packageHandler.GetPackage)
+						r.With(requireAuth).Put("/", packageHandler.UpdatePackage)
+						r.With(requireAuth).Delete("/", packageHandler.DeletePackage)
 
 						// Version endpoints
 						r.Route("/version", func(r chi.Router) {
-							// List versions (no auth required)
-							if s.handlers.ListVersions != nil {
-								r.Get("/", s.handlers.ListVersions)
-							}
-
-							// Create version (auth required)
-							if s.handlers.CreateVersion != nil {
-								r.With(middleware.RequireAuth(s.authenticator)).Post("/", s.handlers.CreateVersion)
-							}
+							r.Get("/", versionHandler.ListVersions)
+							r.With(requireAuth).Post("/", versionHandler.CreateVersion)
 
 							// Single version operations
 							r.Route("/{version}", func(r chi.Router) {
-								// Get version (no auth required)
-								if s.handlers.GetVersion != nil {
-									r.Get("/", s.handlers.GetVersion)
-								}
-
-								// Delete version (auth required)
-								if s.handlers.DeleteVersion != nil {
-									r.With(middleware.RequireAuth(s.authenticator)).Delete("/", s.handlers.DeleteVersion)
-								}
+								r.Get("/", versionHandler.GetVersion)
+								r.With(requireAuth).Delete("/", versionHandler.DeleteVersion)
 							})
 						})
 					})
@@ -253,25 +182,4 @@ func (s *Server) setupRouter() *chi.Mux {
 	})
 
 	return router
-}
-
-// SetHandlers sets all handlers (called from main to avoid import cycle)
-func (s *Server) SetHandlers(handlers HandlerSet) {
-	s.handlers = handlers
-}
-
-func (s *Server) serveIndexPlaceholder(w http.ResponseWriter, r *http.Request) {
-	if s.handlers.IndexGet != nil {
-		s.handlers.IndexGet(w, r)
-	} else {
-		http.Error(w, "Index handler not configured", http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) handleOptionsPlaceholder(w http.ResponseWriter, r *http.Request) {
-	if s.handlers.IndexOptions != nil {
-		s.handlers.IndexOptions(w, r)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
 }

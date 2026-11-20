@@ -12,7 +12,6 @@ import (
 	"github.com/criteo/command-launcher-registry/internal/branding"
 	"github.com/criteo/command-launcher-registry/internal/config"
 	"github.com/criteo/command-launcher-registry/internal/server"
-	"github.com/criteo/command-launcher-registry/internal/server/handlers"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
 
@@ -165,38 +164,6 @@ func runServer(cmd *cobra.Command, args []string) error {
 
 	// Create server
 	srv := server.NewServer(cfg, logger, store, authenticator)
-
-	// Create all handlers
-	indexHandler := handlers.NewIndexHandler(store, logger)
-	registryHandler := handlers.NewRegistryHandler(store, logger)
-	packageHandler := handlers.NewPackageHandler(store, logger)
-	versionHandler := handlers.NewVersionHandler(store, logger)
-	healthHandler := handlers.NewHealthHandler(store, logger)
-	metricsHandler := handlers.NewMetricsHandler(logger)
-	whoamiHandler := handlers.NewWhoamiHandler(authenticator, logger)
-
-	// Set all handlers
-	srv.SetHandlers(server.HandlerSet{
-		IndexGet:       indexHandler.GetIndex,
-		IndexOptions:   indexHandler.HandleOptions,
-		Health:         healthHandler.GetHealth,
-		Metrics:        metricsHandler.GetMetrics,
-		Whoami:         whoamiHandler.GetWhoami,
-		ListRegistries: registryHandler.ListRegistries,
-		CreateRegistry: registryHandler.CreateRegistry,
-		GetRegistry:    registryHandler.GetRegistry,
-		UpdateRegistry: registryHandler.UpdateRegistry,
-		DeleteRegistry: registryHandler.DeleteRegistry,
-		ListPackages:   packageHandler.ListPackages,
-		CreatePackage:  packageHandler.CreatePackage,
-		GetPackage:     packageHandler.GetPackage,
-		UpdatePackage:  packageHandler.UpdatePackage,
-		DeletePackage:  packageHandler.DeletePackage,
-		ListVersions:   versionHandler.ListVersions,
-		CreateVersion:  versionHandler.CreateVersion,
-		GetVersion:     versionHandler.GetVersion,
-		DeleteVersion:  versionHandler.DeleteVersion,
-	})
 
 	// Start server
 	logger.Info("Server ready to accept connections",
