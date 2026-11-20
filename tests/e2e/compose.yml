@@ -1,0 +1,75 @@
+# End-to-end stack: the real cdt-registry image (docker/Dockerfile, PREFIX=cdt),
+# MinIO as its S3 storage, and custom_jwt auth through a stub validator that
+# keeps the deployed script's contract (see tests/e2e/auth/verify_jwt.sh).
+#
+# Use the make targets: make e2e-up | make e2e | make e2e-down.
+# Host ports bind to 127.0.0.1 and can be moved with E2E_REGISTRY_PORT and
+# E2E_MINIO_PORT.
+name: clr-e2e
+
+services:
+  minio:
+    # The official minio/minio image is no longer published anonymously
+    # (gone from Docker Hub, quay.io needs auth). This frozen Bitnami build
+    # creates the bucket from MINIO_DEFAULT_BUCKETS, so no init container.
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: e2e-access
+      MINIO_ROOT_PASSWORD: e2e-secret-key
+      MINIO_DEFAULT_BUCKETS: cdt-registry,integration-tests
+    volumes:
+      # tmpfs: every (re)created stack starts with empty storage.
+      - type: tmpfs
+        target: /bitnami/minio/data
+        tmpfs:
+          mode: 01777
+    ports:
+      - "127.0.0.1:${E2E_MINIO_PORT:-29000}:9000"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost:9000/minio/health/live && test -d /bitnami/minio/data/cdt-registry && test -d /bitnami/minio/data/integration-tests
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  registry:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      args:
+        PREFIX: cdt
+    image: clr-e2e/cdt-registry:local
+    depends_on:
+      minio:
+        condition: service_healthy
+    # Part of the config comes as flags, the rest as CDT_REGISTRY_* env, so
+    # both paths and their precedence are exercised.
+    command:
+      - server
+      - --auth-type=custom_jwt
+      - --auth-custom-jwt-script=/e2e/auth/verify_jwt.sh
+      - --log-level=debug # must win over CDT_REGISTRY_LOGGING_LEVEL below
+    environment:
+      CDT_REGISTRY_STORAGE_URI: s3+http://minio:9000/cdt-registry/registry.json
+      CDT_REGISTRY_STORAGE_TOKEN: e2e-access:e2e-secret-key
+      CDT_REGISTRY_AUTH_CUSTOM_JWT_REQUIRED_GROUP: g-e2e-writers
+      CDT_REGISTRY_LOGGING_LEVEL: warn
+      CDT_REGISTRY_LOGGING_FORMAT: json
+      # Decoy: the cdt binary must ignore the cola prefix. If it did not, the
+      # server would listen on 9999 and the health check would fail.
+      COLA_REGISTRY_SERVER_PORT: "9999"
+      # Read by the validator script, same variable as the deployed one.
+      JWT_ALLOWED_ISSUERS: criteo-jtc,criteo-jenkins
+      # Server admins (ticket 06) turn role enforcement on. Ticket 07 enables
+      # this line together with its role scenarios:
+      # CDT_REGISTRY_ADMINS: g-e2e-server-admins
+    volumes:
+      - ./auth:/e2e/auth:ro
+    ports:
+      - "127.0.0.1:${E2E_REGISTRY_PORT:-28080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

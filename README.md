@@ -724,8 +724,38 @@ make fmt          # Format code
 make fmt-check    # Check formatting (for CI)
 make lint         # Run linter (go vet)
 make install-cli  # Install CLI to $GOPATH/bin
+make e2e-up       # Start the end-to-end stack (Docker)
+make e2e          # Start it, run e2e scenarios and integration tests
+make e2e-down     # Stop and remove the end-to-end stack
 make help         # Show all targets
 ```
+
+### End-to-end tests
+
+`make e2e` checks what unit tests cannot: the real server image, S3 storage, authentication and the CLI working together. It needs Docker with Compose v2 (on macOS, for example, `colima start`).
+
+What it starts (`tests/e2e/compose.yml`, project `clr-e2e`):
+
+- the server image built from `docker/Dockerfile` with `PREFIX=cdt`, configured with a mix of `CDT_REGISTRY_*` env vars and flags;
+- MinIO as its S3 storage, empty on every start;
+- `custom_jwt` auth through `tests/e2e/auth/verify_jwt.sh`. This stub keeps the contract of the deployed validator: it checks issuer and expiry, takes the identity from `ctx:user:uid` or `ctx:service:name`, and reads groups from a fixture that stands in for IDM `member_of` (`tests/e2e/auth/idm-member-of.txt`). It does not check signatures. `REQUIRED_GROUP` is set, as in the deployment.
+
+What it runs (`tests/e2e/run.sh`):
+
+1. every scenario in `tests/e2e/scenarios/`, in name order, using `bin/cdt-regctl` and `curl`;
+2. `go test ./tests/integration/...`, with the S3 tests pointed at the compose MinIO.
+
+It prints one line per check and a summary. Logs go to `bin/e2e/` (`registry.log`, `integration.log`). The stack stays up afterwards, on `http://localhost:28080` (registry) and `localhost:29000` (MinIO); `make e2e-down` removes it. Every target is safe to rerun, and `make e2e` always starts from empty storage. Set `E2E_REGISTRY_PORT` or `E2E_MINIO_PORT` if those ports are taken.
+
+To poke at the stack by hand:
+
+```bash
+source tests/e2e/lib.sh
+export CDT_REGISTRY_URL=$E2E_URL CDT_REGISTRY_TOKEN=$(mint_token user e2e-writer)
+bin/cdt-regctl registry list
+```
+
+To add a scenario, create `tests/e2e/scenarios/NN-name.sh`. `run.sh` sources it with the helpers of `tests/e2e/lib.sh` already loaded (`mint_token`, `run_regctl`, `check_regctl`, `check_status`, `check_contains`, …). The fixture identities and their groups are listed in `tests/e2e/auth/idm-member-of.txt`.
 
 ### Project Structure
 
@@ -752,7 +782,8 @@ internal/
 ├── config/                     # Server configuration
 └── apierrors/                  # API error types
 tests/
-└── integration/                # Integration tests (OCI, S3, server)
+├── integration/                # Integration tests (OCI, S3, server)
+└── e2e/                        # End-to-end stack and scenarios (make e2e)
 scripts/                        # Test data scripts
 docker/
 └── Dockerfile                  # Multi-stage Docker build

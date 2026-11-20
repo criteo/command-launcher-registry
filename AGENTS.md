@@ -131,6 +131,7 @@ The CLI prioritizes user experience:
 - **No mocks for external services**: Use real services in containers for integration tests
 - **Table-driven tests**: Standard Go pattern for parametric tests
 - **Test coverage**: Aim for high coverage but focus on critical paths
+- **End-to-end loop**: `make e2e` runs the real `cdt-registry` image with MinIO S3 storage and prod-like `custom_jwt` auth, drives it with `cdt-regctl`, and runs `tests/integration` against MinIO (needs Docker; see the README "End-to-end tests" section). Role tickets (07, 08 and 12 in `.scratch/role-based-write-access/`) are done only when `make test` and `make e2e` are both green.
 
 ## Security Considerations
 

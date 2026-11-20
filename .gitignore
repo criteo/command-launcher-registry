@@ -30,6 +30,7 @@ data/
 !.github/**/*.yml
 specs
 !docs/*.yaml
+!tests/e2e/compose.yml
 
 # Logs
 *.log

@@ -1,4 +1,4 @@
-.PHONY: build build-cli build-all build-all-prefixes clean test test-cli run fmt lint install-cli help
+.PHONY: build build-cli build-all build-all-prefixes clean test test-cli e2e e2e-up e2e-down run fmt lint install-cli help
 
 # Prefix variable - controls binary names and appName ldflags
 # Default: cola (produces cola-registry, cola-regctl)
@@ -70,6 +70,22 @@ test-cli:
 	@echo "Running CLI tests..."
 	@go test -v -race ./internal/client/...
 	@echo "CLI tests complete"
+
+# End-to-end stack (tests/e2e): real cdt-registry image, MinIO S3, cdt-regctl
+E2E_COMPOSE = docker compose -f tests/e2e/compose.yml
+
+## e2e-up: Build the image and start the e2e stack from a clean state
+e2e-up:
+	@$(E2E_COMPOSE) up --detach --build --wait --force-recreate --renew-anon-volumes
+
+## e2e: Start the e2e stack, run scenarios and integration tests, report
+e2e: e2e-up
+	@$(MAKE) --no-print-directory build-cli PREFIX=cdt
+	@tests/e2e/run.sh
+
+## e2e-down: Stop the e2e stack and remove its containers, network and volumes
+e2e-down:
+	@$(E2E_COMPOSE) down --volumes --remove-orphans
 
 ## run: Build and run the server
 run: build
