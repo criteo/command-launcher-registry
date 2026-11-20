@@ -57,7 +57,8 @@ func (h *VersionHandler) CreateVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create version
-	if err := h.store.CreateVersion(r.Context(), registryName, packageName, &version); err != nil {
+	// nil guard: roles on package and version writes come with ticket 08.
+	if err := h.store.CreateVersion(r.Context(), registryName, packageName, &version, nil); err != nil {
 		if err == storage.ErrNotFound {
 			// Determine what was not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {
@@ -156,7 +157,8 @@ func (h *VersionHandler) DeleteVersion(w http.ResponseWriter, r *http.Request) {
 	versionNum := chi.URLParam(r, "version")
 
 	// Delete version
-	if err := h.store.DeleteVersion(r.Context(), registryName, packageName, versionNum); err != nil {
+	// nil guard: roles on package and version writes come with ticket 08.
+	if err := h.store.DeleteVersion(r.Context(), registryName, packageName, versionNum, nil); err != nil {
 		if err == storage.ErrNotFound {
 			// Determine what was not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {

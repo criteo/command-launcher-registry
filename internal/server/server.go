@@ -113,7 +113,8 @@ func (s *Server) Shutdown() error {
 // wiring: the server-admin list, in force only when cfg.RolesEnforced().
 func NewHandler(cfg *config.Config, logger *slog.Logger, store storage.Store, authenticator auth.Authenticator) http.Handler {
 	indexHandler := handlers.NewIndexHandler(store, logger)
-	registryHandler := handlers.NewRegistryHandler(store, logger)
+	authorizer := handlers.NewAuthorizer(serverAdmins(cfg), logger)
+	registryHandler := handlers.NewRegistryHandler(store, authorizer, logger)
 	packageHandler := handlers.NewPackageHandler(store, logger)
 	versionHandler := handlers.NewVersionHandler(store, logger)
 	healthHandler := handlers.NewHealthHandler(store, logger)

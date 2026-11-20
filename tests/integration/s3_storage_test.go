@@ -92,7 +92,7 @@ func TestS3Storage_FullCRUDLifecycle(t *testing.T) {
 		Packages:    make(map[string]*models.Package),
 	}
 
-	err = store.CreateRegistry(ctx, registry)
+	err = store.CreateRegistry(ctx, registry, nil)
 	require.NoError(t, err, "Failed to create registry")
 
 	// Test: Get registry
@@ -109,7 +109,7 @@ func TestS3Storage_FullCRUDLifecycle(t *testing.T) {
 		Versions:    make(map[string]*models.Version),
 	}
 
-	err = store.CreatePackage(ctx, "test-registry", pkg)
+	err = store.CreatePackage(ctx, "test-registry", pkg, nil)
 	require.NoError(t, err, "Failed to create package")
 
 	// Test: Get package
@@ -127,7 +127,7 @@ func TestS3Storage_FullCRUDLifecycle(t *testing.T) {
 		EndPartition:   9,
 	}
 
-	err = store.CreateVersion(ctx, "test-registry", "test-package", version)
+	err = store.CreateVersion(ctx, "test-registry", "test-package", version, nil)
 	require.NoError(t, err, "Failed to create version")
 
 	// Test: Get version
@@ -142,15 +142,15 @@ func TestS3Storage_FullCRUDLifecycle(t *testing.T) {
 	assert.Len(t, registries, 1)
 
 	// Test: Delete version
-	err = store.DeleteVersion(ctx, "test-registry", "test-package", "1.0.0")
+	err = store.DeleteVersion(ctx, "test-registry", "test-package", "1.0.0", nil)
 	require.NoError(t, err, "Failed to delete version")
 
 	// Test: Delete package
-	err = store.DeletePackage(ctx, "test-registry", "test-package")
+	err = store.DeletePackage(ctx, "test-registry", "test-package", nil)
 	require.NoError(t, err, "Failed to delete package")
 
 	// Test: Delete registry
-	err = store.DeleteRegistry(ctx, "test-registry")
+	err = store.DeleteRegistry(ctx, "test-registry", nil)
 	require.NoError(t, err, "Failed to delete registry")
 
 	// Verify cleanup

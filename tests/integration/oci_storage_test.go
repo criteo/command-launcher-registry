@@ -54,7 +54,7 @@ func TestOCIStorage_Integration(t *testing.T) {
 
 	t.Run("CreateRegistry", func(t *testing.T) {
 		reg := models.NewRegistry("oci-test-reg", "OCI Test Registry", nil, nil)
-		err := store.CreateRegistry(ctx, reg)
+		err := store.CreateRegistry(ctx, reg, nil)
 		require.NoError(t, err)
 	})
 
@@ -67,7 +67,7 @@ func TestOCIStorage_Integration(t *testing.T) {
 
 	t.Run("CreatePackage", func(t *testing.T) {
 		pkg := models.NewPackage("oci-test-pkg", "OCI Test Package", nil, nil)
-		err := store.CreatePackage(ctx, "oci-test-reg", pkg)
+		err := store.CreatePackage(ctx, "oci-test-reg", pkg, nil)
 		require.NoError(t, err)
 	})
 
@@ -80,7 +80,7 @@ func TestOCIStorage_Integration(t *testing.T) {
 			StartPartition: 0,
 			EndPartition:   9,
 		}
-		err := store.CreateVersion(ctx, "oci-test-reg", "oci-test-pkg", ver)
+		err := store.CreateVersion(ctx, "oci-test-reg", "oci-test-pkg", ver, nil)
 		require.NoError(t, err)
 	})
 
@@ -93,17 +93,17 @@ func TestOCIStorage_Integration(t *testing.T) {
 	})
 
 	t.Run("DeleteVersion", func(t *testing.T) {
-		err := store.DeleteVersion(ctx, "oci-test-reg", "oci-test-pkg", "1.0.0")
+		err := store.DeleteVersion(ctx, "oci-test-reg", "oci-test-pkg", "1.0.0", nil)
 		require.NoError(t, err)
 	})
 
 	t.Run("DeletePackage", func(t *testing.T) {
-		err := store.DeletePackage(ctx, "oci-test-reg", "oci-test-pkg")
+		err := store.DeletePackage(ctx, "oci-test-reg", "oci-test-pkg", nil)
 		require.NoError(t, err)
 	})
 
 	t.Run("DeleteRegistry", func(t *testing.T) {
-		err := store.DeleteRegistry(ctx, "oci-test-reg")
+		err := store.DeleteRegistry(ctx, "oci-test-reg", nil)
 		require.NoError(t, err)
 	})
 }
@@ -187,7 +187,7 @@ func testOCIStorageBasicOps(t *testing.T, uri, token string) {
 
 	// Create and verify registry
 	reg := models.NewRegistry("multi-reg-test", "Multi-Registry Test", nil, nil)
-	err = store.CreateRegistry(ctx, reg)
+	err = store.CreateRegistry(ctx, reg, nil)
 	require.NoError(t, err)
 
 	// Verify it was created
@@ -196,6 +196,6 @@ func testOCIStorageBasicOps(t *testing.T, uri, token string) {
 	assert.Equal(t, "multi-reg-test", retrieved.Name)
 
 	// Cleanup
-	err = store.DeleteRegistry(ctx, "multi-reg-test")
+	err = store.DeleteRegistry(ctx, "multi-reg-test", nil)
 	require.NoError(t, err)
 }

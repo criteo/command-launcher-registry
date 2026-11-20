@@ -61,9 +61,9 @@ services:
       COLA_REGISTRY_SERVER_PORT: "9999"
       # Read by the validator script, same variable as the deployed one.
       JWT_ALLOWED_ISSUERS: criteo-jtc,criteo-jenkins
-      # Server admins (ticket 06) turn role enforcement on. Ticket 07 enables
-      # this line together with its role scenarios:
-      # CDT_REGISTRY_ADMINS: g-e2e-server-admins
+      # Server admins (ticket 06) turn role enforcement on. A scenario can
+      # recreate the server with E2E_ADMINS= (empty) to check enforcement off.
+      CDT_REGISTRY_ADMINS: ${E2E_ADMINS-g-e2e-server-admins}
     volumes:
       - ./auth:/e2e/auth:ro
     ports:

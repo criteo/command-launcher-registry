@@ -59,7 +59,8 @@ func (h *PackageHandler) CreatePackage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create package
-	if err := h.store.CreatePackage(r.Context(), registryName, &pkg); err != nil {
+	// nil guard: roles on package and version writes come with ticket 08.
+	if err := h.store.CreatePackage(r.Context(), registryName, &pkg, nil); err != nil {
 		if err == storage.ErrNotFound {
 			code, msg, status := apierrors.MapStorageError(err, "registry")
 			apierrors.WriteError(w, code, msg, status, nil)
@@ -162,7 +163,8 @@ func (h *PackageHandler) UpdatePackage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update package (merged under the storage lock, versions preserved)
-	pkg, err := h.store.UpdatePackage(r.Context(), registryName, packageName, &update)
+	// nil guard: roles on package and version writes come with ticket 08.
+	pkg, err := h.store.UpdatePackage(r.Context(), registryName, packageName, &update, nil)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			// Determine if registry or package not found
@@ -204,7 +206,8 @@ func (h *PackageHandler) DeletePackage(w http.ResponseWriter, r *http.Request) {
 	packageName := chi.URLParam(r, "package")
 
 	// Delete package (cascade delete handled by storage layer)
-	if err := h.store.DeletePackage(r.Context(), registryName, packageName); err != nil {
+	// nil guard: roles on package and version writes come with ticket 08.
+	if err := h.store.DeletePackage(r.Context(), registryName, packageName, nil); err != nil {
 		if err == storage.ErrNotFound {
 			// Determine if registry or package not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {

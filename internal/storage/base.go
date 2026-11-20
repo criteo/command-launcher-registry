@@ -81,12 +81,27 @@ func (b *BaseStorage) UnmarshalData(jsonData []byte) error {
 // PersistFunc is a callback function that backends implement for persistence
 type PersistFunc func() error
 
+// check runs guard on the current data. Caller MUST hold the write lock.
+// Every write operation calls it after its not-found checks and before its
+// already-exists checks and the mutation, so a denied write returns the
+// guard's error and changes nothing.
+func (b *BaseStorage) check(guard Guard) error {
+	if guard == nil {
+		return nil
+	}
+	return guard(b.data)
+}
+
 // CreateRegistry creates a new registry in memory.
 // The persist callback is called after the in-memory operation succeeds.
 // If persist fails, the in-memory change is rolled back.
-func (b *BaseStorage) CreateRegistry(ctx context.Context, r *models.Registry, persist PersistFunc) error {
+func (b *BaseStorage) CreateRegistry(ctx context.Context, r *models.Registry, guard Guard, persist PersistFunc) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
+	if err := b.check(guard); err != nil {
+		return err
+	}
 
 	// Check if already exists
 	if _, exists := b.data.Registries[r.Name]; exists {
@@ -131,7 +146,7 @@ func (b *BaseStorage) GetRegistry(ctx context.Context, name string) (*models.Reg
 // lock, so concurrent updates of different fields are not lost. Packages are
 // preserved. The persist callback is called after the in-memory operation
 // succeeds.
-func (b *BaseStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate, persist PersistFunc) (*models.Registry, error) {
+func (b *BaseStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate, guard Guard, persist PersistFunc) (*models.Registry, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -139,6 +154,10 @@ func (b *BaseStorage) UpdateRegistry(ctx context.Context, name string, u *models
 	existing, exists := b.data.Registries[name]
 	if !exists {
 		return nil, ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return nil, err
 	}
 
 	// Merge into a copy, so readers holding the old registry never see a
@@ -171,7 +190,7 @@ func (b *BaseStorage) UpdateRegistry(ctx context.Context, name string, u *models
 
 // DeleteRegistry deletes a registry and all its packages.
 // The persist callback is called after the in-memory operation succeeds.
-func (b *BaseStorage) DeleteRegistry(ctx context.Context, name string, persist PersistFunc) error {
+func (b *BaseStorage) DeleteRegistry(ctx context.Context, name string, guard Guard, persist PersistFunc) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -179,6 +198,10 @@ func (b *BaseStorage) DeleteRegistry(ctx context.Context, name string, persist P
 	registry, exists := b.data.Registries[name]
 	if !exists {
 		return ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return err
 	}
 
 	// Delete from storage (in-memory)
@@ -218,7 +241,7 @@ func (b *BaseStorage) ListRegistries(ctx context.Context) ([]*models.Registry, e
 
 // CreatePackage creates a new package in a registry.
 // The persist callback is called after the in-memory operation succeeds.
-func (b *BaseStorage) CreatePackage(ctx context.Context, registryName string, p *models.Package, persist PersistFunc) error {
+func (b *BaseStorage) CreatePackage(ctx context.Context, registryName string, p *models.Package, guard Guard, persist PersistFunc) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -226,6 +249,10 @@ func (b *BaseStorage) CreatePackage(ctx context.Context, registryName string, p 
 	registry, exists := b.data.Registries[registryName]
 	if !exists {
 		return ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return err
 	}
 
 	// Check if package already exists
@@ -278,7 +305,7 @@ func (b *BaseStorage) GetPackage(ctx context.Context, registryName, packageName 
 // updated package. The merge happens under the lock, as in UpdateRegistry.
 // Versions are preserved. The persist callback is called after the in-memory
 // operation succeeds.
-func (b *BaseStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate, persist PersistFunc) (*models.Package, error) {
+func (b *BaseStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate, guard Guard, persist PersistFunc) (*models.Package, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -292,6 +319,10 @@ func (b *BaseStorage) UpdatePackage(ctx context.Context, registryName, packageNa
 	oldPackage, exists := registry.Packages[packageName]
 	if !exists {
 		return nil, ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return nil, err
 	}
 
 	// Merge into a copy (see UpdateRegistry)
@@ -325,7 +356,7 @@ func (b *BaseStorage) UpdatePackage(ctx context.Context, registryName, packageNa
 
 // DeletePackage deletes a package and all its versions.
 // The persist callback is called after the in-memory operation succeeds.
-func (b *BaseStorage) DeletePackage(ctx context.Context, registryName, packageName string, persist PersistFunc) error {
+func (b *BaseStorage) DeletePackage(ctx context.Context, registryName, packageName string, guard Guard, persist PersistFunc) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -339,6 +370,10 @@ func (b *BaseStorage) DeletePackage(ctx context.Context, registryName, packageNa
 	pkg, exists := registry.Packages[packageName]
 	if !exists {
 		return ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return err
 	}
 
 	// Delete package
@@ -386,7 +421,7 @@ func (b *BaseStorage) ListPackages(ctx context.Context, registryName string) ([]
 // CreateVersion creates a new version for a package.
 // Enforces immutability and partition overlap validation.
 // The persist callback is called after the in-memory operation succeeds.
-func (b *BaseStorage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version, persist PersistFunc) error {
+func (b *BaseStorage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version, guard Guard, persist PersistFunc) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -400,6 +435,10 @@ func (b *BaseStorage) CreateVersion(ctx context.Context, registryName, packageNa
 	pkg, exists := registry.Packages[packageName]
 	if !exists {
 		return ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return err
 	}
 
 	// Check if version already exists (immutability)
@@ -457,7 +496,7 @@ func (b *BaseStorage) GetVersion(ctx context.Context, registryName, packageName,
 
 // DeleteVersion deletes a specific version.
 // The persist callback is called after the in-memory operation succeeds.
-func (b *BaseStorage) DeleteVersion(ctx context.Context, registryName, packageName, version string, persist PersistFunc) error {
+func (b *BaseStorage) DeleteVersion(ctx context.Context, registryName, packageName, version string, guard Guard, persist PersistFunc) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -477,6 +516,10 @@ func (b *BaseStorage) DeleteVersion(ctx context.Context, registryName, packageNa
 	ver, exists := pkg.Versions[version]
 	if !exists {
 		return ErrNotFound
+	}
+
+	if err := b.check(guard); err != nil {
+		return err
 	}
 
 	// Delete version

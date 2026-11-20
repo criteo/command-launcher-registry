@@ -22,6 +22,7 @@ const (
 	ErrCodePartitionOverlap      ErrorCode = "PARTITION_OVERLAP"
 	ErrCodeStorageUnavailable    ErrorCode = "STORAGE_UNAVAILABLE"
 	ErrCodeUnauthorized          ErrorCode = "UNAUTHORIZED"
+	ErrCodeForbidden             ErrorCode = "FORBIDDEN"
 )
 
 // ErrorResponse represents the standard error response format
@@ -50,6 +51,17 @@ func WriteError(w http.ResponseWriter, code ErrorCode, message string, statusCod
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+// WriteForbidden writes the 403 response for a write denied by a role
+// check: code FORBIDDEN, the message naming the role and target (for
+// example "requires registry admin on repos") and details with
+// required_role and target.
+func WriteForbidden(w http.ResponseWriter, err *storage.ForbiddenError) {
+	WriteError(w, ErrCodeForbidden, err.Error(), http.StatusForbidden, map[string]string{
+		"required_role": err.Role,
+		"target":        err.Target,
+	})
 }
 
 // MapStorageError maps storage errors to HTTP responses

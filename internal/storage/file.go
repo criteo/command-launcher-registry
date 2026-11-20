@@ -152,8 +152,8 @@ func (fs *FileStorage) persist() error {
 }
 
 // CreateRegistry creates a new registry
-func (fs *FileStorage) CreateRegistry(ctx context.Context, r *models.Registry) error {
-	return fs.BaseStorage.CreateRegistry(ctx, r, fs.persist)
+func (fs *FileStorage) CreateRegistry(ctx context.Context, r *models.Registry, guard Guard) error {
+	return fs.BaseStorage.CreateRegistry(ctx, r, guard, fs.persist)
 }
 
 // GetRegistry retrieves a registry by name
@@ -162,13 +162,13 @@ func (fs *FileStorage) GetRegistry(ctx context.Context, name string) (*models.Re
 }
 
 // UpdateRegistry applies a partial update to a registry
-func (fs *FileStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate) (*models.Registry, error) {
-	return fs.BaseStorage.UpdateRegistry(ctx, name, u, fs.persist)
+func (fs *FileStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate, guard Guard) (*models.Registry, error) {
+	return fs.BaseStorage.UpdateRegistry(ctx, name, u, guard, fs.persist)
 }
 
 // DeleteRegistry deletes a registry and all its packages (atomic)
-func (fs *FileStorage) DeleteRegistry(ctx context.Context, name string) error {
-	return fs.BaseStorage.DeleteRegistry(ctx, name, fs.persist)
+func (fs *FileStorage) DeleteRegistry(ctx context.Context, name string, guard Guard) error {
+	return fs.BaseStorage.DeleteRegistry(ctx, name, guard, fs.persist)
 }
 
 // ListRegistries returns all registries
@@ -177,8 +177,8 @@ func (fs *FileStorage) ListRegistries(ctx context.Context) ([]*models.Registry, 
 }
 
 // CreatePackage creates a new package in a registry
-func (fs *FileStorage) CreatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return fs.BaseStorage.CreatePackage(ctx, registryName, p, fs.persist)
+func (fs *FileStorage) CreatePackage(ctx context.Context, registryName string, p *models.Package, guard Guard) error {
+	return fs.BaseStorage.CreatePackage(ctx, registryName, p, guard, fs.persist)
 }
 
 // GetPackage retrieves a package from a registry
@@ -187,13 +187,13 @@ func (fs *FileStorage) GetPackage(ctx context.Context, registryName, packageName
 }
 
 // UpdatePackage applies a partial update to a package (preserves versions)
-func (fs *FileStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate) (*models.Package, error) {
-	return fs.BaseStorage.UpdatePackage(ctx, registryName, packageName, u, fs.persist)
+func (fs *FileStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate, guard Guard) (*models.Package, error) {
+	return fs.BaseStorage.UpdatePackage(ctx, registryName, packageName, u, guard, fs.persist)
 }
 
 // DeletePackage deletes a package and all its versions (atomic)
-func (fs *FileStorage) DeletePackage(ctx context.Context, registryName, packageName string) error {
-	return fs.BaseStorage.DeletePackage(ctx, registryName, packageName, fs.persist)
+func (fs *FileStorage) DeletePackage(ctx context.Context, registryName, packageName string, guard Guard) error {
+	return fs.BaseStorage.DeletePackage(ctx, registryName, packageName, guard, fs.persist)
 }
 
 // ListPackages returns all packages in a registry
@@ -202,8 +202,8 @@ func (fs *FileStorage) ListPackages(ctx context.Context, registryName string) ([
 }
 
 // CreateVersion creates a new version for a package
-func (fs *FileStorage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version) error {
-	return fs.BaseStorage.CreateVersion(ctx, registryName, packageName, v, fs.persist)
+func (fs *FileStorage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version, guard Guard) error {
+	return fs.BaseStorage.CreateVersion(ctx, registryName, packageName, v, guard, fs.persist)
 }
 
 // GetVersion retrieves a specific version
@@ -212,8 +212,8 @@ func (fs *FileStorage) GetVersion(ctx context.Context, registryName, packageName
 }
 
 // DeleteVersion deletes a specific version
-func (fs *FileStorage) DeleteVersion(ctx context.Context, registryName, packageName, version string) error {
-	return fs.BaseStorage.DeleteVersion(ctx, registryName, packageName, version, fs.persist)
+func (fs *FileStorage) DeleteVersion(ctx context.Context, registryName, packageName, version string, guard Guard) error {
+	return fs.BaseStorage.DeleteVersion(ctx, registryName, packageName, version, guard, fs.persist)
 }
 
 // ListVersions returns all versions for a package

@@ -232,6 +232,10 @@ paths:
       tags:
         - Registry
       summary: Create a new registry
+      description: |
+        Requires server admin when role enforcement is on (the server-admin
+        setting is non-empty); see ADR 0001. The caller may set `admins` to
+        hand the registry over to its registry admins.
       operationId: createRegistry
       security:
         - basicAuth: []
@@ -254,6 +258,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a server admin: "requires server admin on {name}"'
         '409':
           $ref: '#/components/responses/Conflict'
         '503':
@@ -292,6 +297,10 @@ paths:
         from the body (or `null`) keeps the stored value. `name` is optional
         and, when present, must equal the name in the URL (400 otherwise).
         Packages are always preserved.
+
+        Requires registry admin of this registry (or server admin) when role
+        enforcement is on; this covers `description`, `custom_values` and
+        `admins`, so registry admins add and remove co-admins themselves.
       operationId: updateRegistry
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -316,6 +325,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a registry admin of this registry: "requires registry admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -325,7 +335,9 @@ paths:
       tags:
         - Registry
       summary: Delete a registry
-      description: Deletes the registry and all its packages
+      description: |
+        Deletes the registry and all its packages. Requires server admin when
+        role enforcement is on.
       operationId: deleteRegistry
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -338,6 +350,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a server admin: "requires server admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -733,7 +746,10 @@ components:
           example: Build tools registry
         admins:
           type: array
-          description: Registry admins, as user or group principals (informational only, not enforced in v1)
+          description: |
+            Registry admins, as user or group principals. When role enforcement is
+            on, they hold the registry admin role on this registry (ADR 0001):
+            they update it, including this list, and manage its packages.
           items:
             $ref: '#/components/schemas/Principal'
           example: ['admin', 'team-build']
@@ -771,7 +787,10 @@ components:
           example: Build tools registry
         admins:
           type: array
-          description: Registry admins, as user or group principals (informational only, not enforced in v1)
+          description: |
+            Registry admins, as user or group principals. When role enforcement is
+            on, they hold the registry admin role on this registry (ADR 0001):
+            they update it, including this list, and manage its packages.
           items:
             $ref: '#/components/schemas/Principal'
           example: ['admin']
@@ -794,7 +813,11 @@ components:
           example: Updated description
         admins:
           type: array
-          description: Registry admins, as user or group principals
+          description: |
+            Registry admins, as user or group principals. When role enforcement is
+            on, they hold the registry admin role on this registry (ADR 0001):
+            they update it, including this list, and manage its packages.
+            Present: replaces the list (`[]` clears it); absent: kept.
           items:
             $ref: '#/components/schemas/Principal'
         custom_values:
@@ -974,6 +997,7 @@ components:
             - INVALID_PARTITION
             - STORAGE_UNAVAILABLE
             - UNAUTHORIZED
+            - FORBIDDEN
             - RATE_LIMIT_EXCEEDED
           example: REGISTRY_NOT_FOUND
         message:
@@ -1010,14 +1034,20 @@ components:
             message: Authentication required
 
     Forbidden:
-      description: Insufficient permissions
+      description: |
+        The caller is authenticated but lacks the role the write requires
+        (role enforcement on, ADR 0001). The message names the missing role
+        and its target; `details` carries both.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             code: FORBIDDEN
-            message: Insufficient permissions to perform this action
+            message: requires registry admin on repos
+            details:
+              required_role: registry admin
+              target: repos
 
     NotFound:
       description: Resource not found

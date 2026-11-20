@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -9,20 +10,25 @@ import (
 
 	"github.com/criteo/command-launcher-registry/internal/apierrors"
 	"github.com/criteo/command-launcher-registry/internal/models"
+	"github.com/criteo/command-launcher-registry/internal/roles"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
 
-// RegistryHandler handles registry CRUD operations
+// RegistryHandler handles registry CRUD operations. Writes are checked
+// against the caller's roles by the authorizer's guard, under the storage
+// lock.
 type RegistryHandler struct {
-	store  storage.Store
-	logger *slog.Logger
+	store      storage.Store
+	authorizer *Authorizer
+	logger     *slog.Logger
 }
 
 // NewRegistryHandler creates a new registry handler
-func NewRegistryHandler(store storage.Store, logger *slog.Logger) *RegistryHandler {
+func NewRegistryHandler(store storage.Store, authorizer *Authorizer, logger *slog.Logger) *RegistryHandler {
 	return &RegistryHandler{
-		store:  store,
-		logger: logger,
+		store:      store,
+		authorizer: authorizer,
+		logger:     logger,
 	}
 }
 
@@ -60,8 +66,18 @@ func (h *RegistryHandler) CreateRegistry(w http.ResponseWriter, r *http.Request)
 		registry.Packages = make(map[string]*models.Package)
 	}
 
-	// Create registry
-	if err := h.store.CreateRegistry(r.Context(), &registry); err != nil {
+	// Create registry (requires server admin, checked under the storage lock)
+	var newAdmins *[]string
+	if registry.Admins != nil {
+		newAdmins = &registry.Admins
+	}
+	guard := h.authorizer.Guard(r, roles.CreateRegistry, roles.Target{Registry: registry.Name}, newAdmins)
+	if err := h.store.CreateRegistry(r.Context(), &registry, guard); err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrAlreadyExists {
 			code, msg, status := apierrors.MapStorageError(err, "registry")
 			apierrors.WriteError(w, code, msg, status, nil)
@@ -144,9 +160,16 @@ func (h *RegistryHandler) UpdateRegistry(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Update registry (merged under the storage lock, packages preserved)
-	registry, err := h.store.UpdateRegistry(r.Context(), registryName, &update)
+	// Update registry (requires registry admin; checked and merged under the
+	// storage lock, packages preserved)
+	guard := h.authorizer.Guard(r, roles.UpdateRegistry, roles.Target{Registry: registryName}, update.Admins)
+	registry, err := h.store.UpdateRegistry(r.Context(), registryName, &update, guard)
 	if err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			code, msg, status := apierrors.MapStorageError(err, "registry")
 			apierrors.WriteError(w, code, msg, status, nil)
@@ -177,8 +200,15 @@ func (h *RegistryHandler) UpdateRegistry(w http.ResponseWriter, r *http.Request)
 func (h *RegistryHandler) DeleteRegistry(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "name")
 
-	// Delete registry (cascade delete handled by storage layer)
-	if err := h.store.DeleteRegistry(r.Context(), registryName); err != nil {
+	// Delete registry (requires server admin, checked under the storage
+	// lock; cascade delete handled by storage layer)
+	guard := h.authorizer.Guard(r, roles.DeleteRegistry, roles.Target{Registry: registryName}, nil)
+	if err := h.store.DeleteRegistry(r.Context(), registryName, guard); err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			code, msg, status := apierrors.MapStorageError(err, "registry")
 			apierrors.WriteError(w, code, msg, status, nil)
