@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/criteo/command-launcher-registry/internal/models"
 )
@@ -24,26 +25,53 @@ var (
 	ErrPartitionOverlap = errors.New("partition ranges overlap")
 )
 
-// Store defines the interface for storage operations
+// Guard checks a write against the current data before the storage mutates
+// it. The shared base storage calls it under its write lock, after the
+// not-found checks and before the already-exists checks, so the decision and
+// the mutation see the same data. A non-nil error denies the write: the
+// storage returns it unchanged and persists nothing. A nil Guard allows.
+//
+// A Guard must not call the Store (the lock is held) and must not modify
+// data.
+type Guard func(data *models.Storage) error
+
+// ForbiddenError is the error a Guard returns when the caller lacks the role
+// a write requires. Role is the missing role and Target what it was checked
+// on, for example "registry admin" and "repos".
+type ForbiddenError struct {
+	Role   string
+	Target string
+}
+
+func (e *ForbiddenError) Error() string {
+	return fmt.Sprintf("requires %s on %s", e.Role, e.Target)
+}
+
+// Store defines the interface for storage operations. Every write operation
+// takes a Guard (nil allows), checked under the storage lock.
 type Store interface {
 	// Registry operations
-	CreateRegistry(ctx context.Context, r *models.Registry) error
+	CreateRegistry(ctx context.Context, r *models.Registry, guard Guard) error
 	GetRegistry(ctx context.Context, name string) (*models.Registry, error)
-	UpdateRegistry(ctx context.Context, r *models.Registry) error
-	DeleteRegistry(ctx context.Context, name string) error
+	// UpdateRegistry applies a partial update to a registry under the storage
+	// lock and returns the updated registry. Packages are preserved.
+	UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate, guard Guard) (*models.Registry, error)
+	DeleteRegistry(ctx context.Context, name string, guard Guard) error
 	ListRegistries(ctx context.Context) ([]*models.Registry, error)
 
 	// Package operations
-	CreatePackage(ctx context.Context, registryName string, p *models.Package) error
+	CreatePackage(ctx context.Context, registryName string, p *models.Package, guard Guard) error
 	GetPackage(ctx context.Context, registryName, packageName string) (*models.Package, error)
-	UpdatePackage(ctx context.Context, registryName string, p *models.Package) error
-	DeletePackage(ctx context.Context, registryName, packageName string) error
+	// UpdatePackage applies a partial update to a package under the storage
+	// lock and returns the updated package. Versions are preserved.
+	UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate, guard Guard) (*models.Package, error)
+	DeletePackage(ctx context.Context, registryName, packageName string, guard Guard) error
 	ListPackages(ctx context.Context, registryName string) ([]*models.Package, error)
 
 	// Version operations
-	CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version) error
+	CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version, guard Guard) error
 	GetVersion(ctx context.Context, registryName, packageName, version string) (*models.Version, error)
-	DeleteVersion(ctx context.Context, registryName, packageName, version string) error
+	DeleteVersion(ctx context.Context, registryName, packageName, version string, guard Guard) error
 	ListVersions(ctx context.Context, registryName, packageName string) ([]*models.Version, error)
 
 	// Index generation

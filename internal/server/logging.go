@@ -1,13 +1,14 @@
 package server
 
 import (
+	"io"
 	"log/slog"
-	"os"
 )
 
-// NewLogger creates a new structured logger
-func NewLogger(level, format string) *slog.Logger {
-	// Parse log level
+// NewLogger creates the server's structured logger, writing to w at the
+// configured level ("debug", "info", "warn" or "error"; anything else means
+// "info") in the configured format ("json", anything else means text).
+func NewLogger(w io.Writer, level, format string) *slog.Logger {
 	var logLevel slog.Level
 	switch level {
 	case "debug":
@@ -21,18 +22,20 @@ func NewLogger(level, format string) *slog.Logger {
 	default:
 		logLevel = slog.LevelInfo
 	}
+	return newLogger(w, logLevel, format)
+}
 
-	// Create handler based on format
-	var handler slog.Handler
-	opts := &slog.HandlerOptions{
-		Level: logLevel,
-	}
+// NewAuditLogger creates the logger for write audit lines: the same output
+// and format as NewLogger, but always at Info, whatever the configured
+// level, so audit lines are never filtered out.
+func NewAuditLogger(w io.Writer, format string) *slog.Logger {
+	return newLogger(w, slog.LevelInfo, format)
+}
 
+func newLogger(w io.Writer, level slog.Level, format string) *slog.Logger {
+	opts := &slog.HandlerOptions{Level: level}
 	if format == "json" {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
-	} else {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		return slog.New(slog.NewJSONHandler(w, opts))
 	}
-
-	return slog.New(handler)
+	return slog.New(slog.NewTextHandler(w, opts))
 }

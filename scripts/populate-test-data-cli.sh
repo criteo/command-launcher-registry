@@ -4,6 +4,8 @@
 #
 # This script creates a sample registry with packages and versions for testing.
 # It demonstrates CLI usage and provides a convenient way to populate test data.
+# When the server enforces roles (COLA_REGISTRY_ADMINS is set), the user must be
+# a server admin: only server admins create and delete registries.
 #
 # Usage:
 #   ./scripts/populate-test-data-cli.sh [server_url] [username:password]
@@ -59,7 +61,7 @@ echo
 echo "Creating registry 'company-tools'..."
 ${CLI} registry create company-tools \
     --description "Company internal tools registry" \
-    --admin "admin@example.com" \
+    --admin "admin, platform-admins" \
     --custom-value "team=platform" \
     --custom-value "owner=devops"
 echo
@@ -68,7 +70,7 @@ echo
 echo "Creating package 'deployment-cli'..."
 ${CLI} package create company-tools deployment-cli \
     --description "CLI tool for deploying applications" \
-    --maintainer "deploy-team@example.com" \
+    --maintainer "deploy-team" \
     --custom-value "language=go" \
     --custom-value "repo=https://github.com/company/deployment-cli"
 echo
@@ -95,7 +97,7 @@ echo
 echo "Creating package 'data-sync'..."
 ${CLI} package create company-tools data-sync \
     --description "Data synchronization utility" \
-    --maintainer "data-team@example.com" \
+    --maintainer "data-team" \
     --custom-value "language=python" \
     --custom-value "repo=https://github.com/company/data-sync"
 echo
@@ -113,7 +115,7 @@ echo
 echo "Creating package 'monitoring-agent'..."
 ${CLI} package create company-tools monitoring-agent \
     --description "System monitoring agent" \
-    --maintainer "sre-team@example.com"
+    --maintainer "sre-team"
 echo
 
 # Create version 3.5.2 for monitoring-agent

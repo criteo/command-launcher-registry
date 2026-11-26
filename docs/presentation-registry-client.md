@@ -144,7 +144,8 @@ cola-regctl login
 ```bash
 # Check current authenticated user
 cola-regctl whoami
-# Output: Logged in as: admin
+# Output: ✓ Authenticated to https://registry.example.com as admin
+#         Server admin: yes
 
 # Logout from current registry
 cola-regctl logout
@@ -264,7 +265,7 @@ cola-regctl package push mypackage \
 # Push with metadata
 cola-regctl package push mypackage \
     --description "My CLI tool" \
-    --maintainer "team@example.com" \
+    --maintainer "alice, my-team" \
     --repository "https://github.com/org/repo"
 ```
 
@@ -273,7 +274,7 @@ cola-regctl package push mypackage \
 | Option | Description |
 |--------|-------------|
 | `--description` | Package description |
-| `--maintainer` | Maintainer email/name |
+| `--maintainer` | Maintainer: user or group (repeatable; comma or space separated) |
 | `--repository` | Source repository URL |
 | `--homepage` | Project homepage |
 
@@ -439,12 +440,12 @@ $ cola-regctl package list --output json
 | Code | Meaning | Example |
 |------|---------|---------|
 | `0` | Success | Command completed successfully |
-| `1` | General error | Unspecified error |
-| `2` | Authentication failed | Invalid credentials |
-| `3` | Not found | Package/version not found |
-| `4` | Conflict | Resource already exists |
-| `5` | Validation error | Invalid input |
-| `6` | Network error | Connection failed |
+| `1` | General error | Network failure, server error |
+| `2` | Invalid arguments | Bad flag, invalid input (HTTP 400) |
+| `3` | Not found | Package/version not found (HTTP 404) |
+| `4` | Conflict | Resource already exists (HTTP 409) |
+| `5` | Authentication error | No or invalid credentials (HTTP 401) |
+| `6` | Permission denied | Missing role, e.g. "requires package maintainer on my-tools/my-cli" (HTTP 403) |
 
 ### Scripting Example
 

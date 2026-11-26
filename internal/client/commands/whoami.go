@@ -53,15 +53,20 @@ func runWhoami(cmd *cobra.Command, args []string) {
 
 	authenticated := resp.StatusCode == http.StatusOK
 	username := "(username unknown)"
+	serverAdmin := false
 
-	// Extract username from server response
+	// Extract username and server-admin flag from server response
 	if authenticated {
 		if body, err := io.ReadAll(resp.Body); err == nil {
-			var whoamiResp map[string]any
+			var whoamiResp struct {
+				Username    string `json:"username"`
+				ServerAdmin bool   `json:"server_admin"`
+			}
 			if json.Unmarshal(body, &whoamiResp) == nil {
-				if user, ok := whoamiResp["username"].(string); ok && user != "" {
-					username = user
+				if whoamiResp.Username != "" {
+					username = whoamiResp.Username
 				}
+				serverAdmin = whoamiResp.ServerAdmin
 			}
 		}
 	}
@@ -71,10 +76,12 @@ func runWhoami(cmd *cobra.Command, args []string) {
 			"server":        serverURL,
 			"authenticated": authenticated,
 			"username":      username,
+			"server_admin":  serverAdmin,
 		}, nil)
 	} else {
 		if authenticated {
 			output.PrintSuccess(fmt.Sprintf("Authenticated to %s as %s", serverURL, username))
+			fmt.Printf("Server admin: %s\n", yesNo(serverAdmin))
 		} else if resp.StatusCode == http.StatusUnauthorized {
 			output.PrintError(fmt.Sprintf("Not authenticated to %s", serverURL))
 			fmt.Printf("Run '%s login' to authenticate\n", branding.AppName())
@@ -86,6 +93,13 @@ func runWhoami(cmd *cobra.Command, args []string) {
 	if !authenticated {
 		errors.ExitWithCode(errors.ExitAuthError, "")
 	}
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
 }
 
 func init() {

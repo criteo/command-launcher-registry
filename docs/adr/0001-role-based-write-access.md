@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Role-based write access: server admin, registry admin, package maintainer
@@ -46,6 +46,7 @@ Each role may edit the role list at its own level and below, so registry admins 
 - The role check runs under the storage lock together with the mutation, so a role removed concurrently cannot let a write through.
 - `GET /whoami` gains `server_admin: true|false`; no other API change.
 - Every allowed or denied write is logged to stdout with caller, matched or missing role, action and target; role-list changes also log the old and new list. No audit data goes into storage.
+- A separate opt-in setting, `COLA_REGISTRY_REQUIRE_MAINTAINERS` (or `--require-maintainers`, default off, independent of `COLA_REGISTRY_ADMINS`), rejects with 400 a package created with missing or empty `maintainers` and a PUT that sets them to `[]`. A PUT that omits `maintainers` keeps them.
 
 ## Considered options
 
@@ -61,4 +62,5 @@ Each role may edit the role list at its own level and below, so registry admins 
 - Existing `admins`/`maintainers` entries become live. Entries written as emails will not match authenticators that report a uid, and must be rewritten.
 - CLI help for `--admin` and `--maintainer` changes from "email" to "user or group".
 - A package with an empty `maintainers` list can be changed only by its registry admins and server admins.
+- With `COLA_REGISTRY_REQUIRE_MAINTAINERS` on, no new package can be created with empty `maintainers`, and no PUT can empty the list. Existing packages with empty `maintainers` stay admin-only until they are backfilled.
 - Roles exist only in the registry server. `index.json` does not change, so Command Launcher is unaffected; packages used without a remote registry, or served from a static `index.json`, carry no maintainer information.

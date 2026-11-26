@@ -1,0 +1,10 @@
+# Stand-in for the IDM API's member_of field, read by verify_jwt.sh.
+# One identity per line: <kind> <name> <group>...
+# kind is "user" (claim ctx:user:uid) or "service" (claim ctx:service:name).
+# g-e2e-writers is the REQUIRED_GROUP set in compose.yml.
+user    e2e-server-admin    g-e2e-writers g-e2e-server-admins
+user    e2e-registry-admin  g-e2e-writers g-e2e-registry-admins
+user    e2e-maintainer      g-e2e-writers g-e2e-team-a
+user    e2e-writer          g-e2e-writers
+user    e2e-outsider        g-e2e-other
+service svc-e2e-ci          g-e2e-writers g-e2e-ci

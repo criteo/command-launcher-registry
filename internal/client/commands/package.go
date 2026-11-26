@@ -74,12 +74,12 @@ func init() {
 
 	// Create flags
 	packageCreateCmd.Flags().StringVar(&pkgDescription, "description", "", "Package description")
-	packageCreateCmd.Flags().StringSliceVar(&pkgMaintainers, "maintainer", []string{}, "Maintainer email (repeatable)")
+	packageCreateCmd.Flags().StringArrayVar(&pkgMaintainers, "maintainer", nil, "Maintainer: user or group (repeatable; comma or space separated)")
 	packageCreateCmd.Flags().StringSliceVar(&pkgCustomValues, "custom-value", []string{}, "Custom key=value (repeatable)")
 
 	// Update flags
 	packageUpdateCmd.Flags().StringVar(&pkgDescription, "description", "", "Package description")
-	packageUpdateCmd.Flags().StringSliceVar(&pkgMaintainers, "maintainer", []string{}, "Maintainer email (repeatable, replaces all)")
+	packageUpdateCmd.Flags().StringArrayVar(&pkgMaintainers, "maintainer", nil, "Maintainer: user or group (repeatable; comma or space separated; replaces all)")
 	packageUpdateCmd.Flags().StringSliceVar(&pkgCustomValues, "custom-value", []string{}, "Custom key=value (repeatable, replaces all)")
 	packageUpdateCmd.Flags().BoolVar(&pkgClearMaint, "clear-maintainers", false, "Clear all maintainers")
 	packageUpdateCmd.Flags().BoolVar(&pkgClearCustomVal, "clear-custom-values", false, "Clear all custom values")
@@ -106,7 +106,7 @@ func runPackageCreate(cmd *cobra.Command, args []string) {
 		reqBody["description"] = pkgDescription
 	}
 	if len(pkgMaintainers) > 0 {
-		reqBody["maintainers"] = pkgMaintainers
+		reqBody["maintainers"] = parsePrincipalFlag("maintainer", pkgMaintainers)
 	}
 	if len(customValues) > 0 {
 		reqBody["custom_values"] = customValues
@@ -260,7 +260,7 @@ func runPackageUpdate(cmd *cobra.Command, args []string) {
 	if pkgClearMaint {
 		reqBody["maintainers"] = []string{}
 	} else if len(pkgMaintainers) > 0 {
-		reqBody["maintainers"] = pkgMaintainers
+		reqBody["maintainers"] = parsePrincipalFlag("maintainer", pkgMaintainers)
 	}
 	if pkgClearCustomVal {
 		reqBody["custom_values"] = map[string]string{}

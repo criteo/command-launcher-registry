@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -9,20 +10,25 @@ import (
 
 	"github.com/criteo/command-launcher-registry/internal/apierrors"
 	"github.com/criteo/command-launcher-registry/internal/models"
+	"github.com/criteo/command-launcher-registry/internal/roles"
 	"github.com/criteo/command-launcher-registry/internal/storage"
 )
 
-// VersionHandler handles version CRUD operations
+// VersionHandler handles version CRUD operations. Each write is checked
+// against the caller's roles by the authorizer's guard, under the storage
+// lock.
 type VersionHandler struct {
-	store  storage.Store
-	logger *slog.Logger
+	store      storage.Store
+	authorizer *Authorizer
+	logger     *slog.Logger
 }
 
 // NewVersionHandler creates a new version handler
-func NewVersionHandler(store storage.Store, logger *slog.Logger) *VersionHandler {
+func NewVersionHandler(store storage.Store, authorizer *Authorizer, logger *slog.Logger) *VersionHandler {
 	return &VersionHandler{
-		store:  store,
-		logger: logger,
+		store:      store,
+		authorizer: authorizer,
+		logger:     logger,
 	}
 }
 
@@ -56,8 +62,14 @@ func (h *VersionHandler) CreateVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create version
-	if err := h.store.CreateVersion(r.Context(), registryName, packageName, &version); err != nil {
+	// Create version: needs package maintainer.
+	guard := h.authorizer.Guard(r, roles.CreateVersion, roles.Target{Registry: registryName, Package: packageName, Version: version.Version}, nil)
+	if err := h.store.CreateVersion(r.Context(), registryName, packageName, &version, guard); err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			// Determine what was not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {
@@ -69,7 +81,7 @@ func (h *VersionHandler) CreateVersion(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		if err == storage.ErrAlreadyExists {
+		if err == storage.ErrAlreadyExists || err == storage.ErrImmutabilityViolation {
 			code, msg, status := apierrors.MapStorageError(err, "version")
 			apierrors.WriteError(w, code, msg, status, nil)
 			return
@@ -155,8 +167,14 @@ func (h *VersionHandler) DeleteVersion(w http.ResponseWriter, r *http.Request) {
 	packageName := chi.URLParam(r, "package")
 	versionNum := chi.URLParam(r, "version")
 
-	// Delete version
-	if err := h.store.DeleteVersion(r.Context(), registryName, packageName, versionNum); err != nil {
+	// Delete version: needs package maintainer.
+	guard := h.authorizer.Guard(r, roles.DeleteVersion, roles.Target{Registry: registryName, Package: packageName, Version: versionNum}, nil)
+	if err := h.store.DeleteVersion(r.Context(), registryName, packageName, versionNum, guard); err != nil {
+		var forbidden *storage.ForbiddenError
+		if errors.As(err, &forbidden) {
+			apierrors.WriteForbidden(w, forbidden)
+			return
+		}
 		if err == storage.ErrNotFound {
 			// Determine what was not found
 			if _, regErr := h.store.GetRegistry(r.Context(), registryName); regErr == storage.ErrNotFound {

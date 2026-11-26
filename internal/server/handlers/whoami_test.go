@@ -64,7 +64,7 @@ func TestWhoamiHandler_GetWhoami(t *testing.T) {
 				}
 			}
 
-			handler := NewWhoamiHandler(authenticator, logger)
+			handler := NewWhoamiHandler(authenticator, nil, logger)
 
 			// Create request
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/whoami", nil)

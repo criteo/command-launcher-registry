@@ -108,8 +108,8 @@ func (s *OCIStorage) persist() error {
 }
 
 // CreateRegistry creates a new registry
-func (s *OCIStorage) CreateRegistry(ctx context.Context, r *models.Registry) error {
-	return s.BaseStorage.CreateRegistry(ctx, r, s.persist)
+func (s *OCIStorage) CreateRegistry(ctx context.Context, r *models.Registry, guard Guard) error {
+	return s.BaseStorage.CreateRegistry(ctx, r, guard, s.persist)
 }
 
 // GetRegistry retrieves a registry by name
@@ -117,14 +117,14 @@ func (s *OCIStorage) GetRegistry(ctx context.Context, name string) (*models.Regi
 	return s.BaseStorage.GetRegistry(ctx, name)
 }
 
-// UpdateRegistry updates registry metadata
-func (s *OCIStorage) UpdateRegistry(ctx context.Context, r *models.Registry) error {
-	return s.BaseStorage.UpdateRegistry(ctx, r, s.persist)
+// UpdateRegistry applies a partial update to a registry
+func (s *OCIStorage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate, guard Guard) (*models.Registry, error) {
+	return s.BaseStorage.UpdateRegistry(ctx, name, u, guard, s.persist)
 }
 
 // DeleteRegistry deletes a registry and all its packages (atomic)
-func (s *OCIStorage) DeleteRegistry(ctx context.Context, name string) error {
-	return s.BaseStorage.DeleteRegistry(ctx, name, s.persist)
+func (s *OCIStorage) DeleteRegistry(ctx context.Context, name string, guard Guard) error {
+	return s.BaseStorage.DeleteRegistry(ctx, name, guard, s.persist)
 }
 
 // ListRegistries returns all registries
@@ -133,8 +133,8 @@ func (s *OCIStorage) ListRegistries(ctx context.Context) ([]*models.Registry, er
 }
 
 // CreatePackage creates a new package in a registry
-func (s *OCIStorage) CreatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return s.BaseStorage.CreatePackage(ctx, registryName, p, s.persist)
+func (s *OCIStorage) CreatePackage(ctx context.Context, registryName string, p *models.Package, guard Guard) error {
+	return s.BaseStorage.CreatePackage(ctx, registryName, p, guard, s.persist)
 }
 
 // GetPackage retrieves a package from a registry
@@ -142,14 +142,14 @@ func (s *OCIStorage) GetPackage(ctx context.Context, registryName, packageName s
 	return s.BaseStorage.GetPackage(ctx, registryName, packageName)
 }
 
-// UpdatePackage updates package metadata (preserves versions)
-func (s *OCIStorage) UpdatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return s.BaseStorage.UpdatePackage(ctx, registryName, p, s.persist)
+// UpdatePackage applies a partial update to a package (preserves versions)
+func (s *OCIStorage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate, guard Guard) (*models.Package, error) {
+	return s.BaseStorage.UpdatePackage(ctx, registryName, packageName, u, guard, s.persist)
 }
 
 // DeletePackage deletes a package and all its versions (atomic)
-func (s *OCIStorage) DeletePackage(ctx context.Context, registryName, packageName string) error {
-	return s.BaseStorage.DeletePackage(ctx, registryName, packageName, s.persist)
+func (s *OCIStorage) DeletePackage(ctx context.Context, registryName, packageName string, guard Guard) error {
+	return s.BaseStorage.DeletePackage(ctx, registryName, packageName, guard, s.persist)
 }
 
 // ListPackages returns all packages in a registry
@@ -158,8 +158,8 @@ func (s *OCIStorage) ListPackages(ctx context.Context, registryName string) ([]*
 }
 
 // CreateVersion creates a new version for a package
-func (s *OCIStorage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version) error {
-	return s.BaseStorage.CreateVersion(ctx, registryName, packageName, v, s.persist)
+func (s *OCIStorage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version, guard Guard) error {
+	return s.BaseStorage.CreateVersion(ctx, registryName, packageName, v, guard, s.persist)
 }
 
 // GetVersion retrieves a specific version
@@ -168,8 +168,8 @@ func (s *OCIStorage) GetVersion(ctx context.Context, registryName, packageName, 
 }
 
 // DeleteVersion deletes a specific version
-func (s *OCIStorage) DeleteVersion(ctx context.Context, registryName, packageName, version string) error {
-	return s.BaseStorage.DeleteVersion(ctx, registryName, packageName, version, s.persist)
+func (s *OCIStorage) DeleteVersion(ctx context.Context, registryName, packageName, version string, guard Guard) error {
+	return s.BaseStorage.DeleteVersion(ctx, registryName, packageName, version, guard, s.persist)
 }
 
 // ListVersions returns all versions for a package

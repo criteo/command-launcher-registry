@@ -131,6 +131,7 @@ The CLI prioritizes user experience:
 - **No mocks for external services**: Use real services in containers for integration tests
 - **Table-driven tests**: Standard Go pattern for parametric tests
 - **Test coverage**: Aim for high coverage but focus on critical paths
+- **End-to-end loop**: `make e2e` runs the real `cdt-registry` image with MinIO S3 storage and prod-like `custom_jwt` auth, drives it with `cdt-regctl`, and runs `tests/integration` against MinIO (needs Docker; see the README "End-to-end tests" section). Role tickets (07, 08 and 12 in `.scratch/role-based-write-access/`) are done only when `make test` and `make e2e` are both green.
 
 ## Security Considerations
 
@@ -158,6 +159,11 @@ The CLI prioritizes user experience:
 3. **Test your changes**: Add tests for new functionality
 4. **Update documentation**: Update relevant docs (README, OpenAPI)
 5. **Check formatting**: Run `make fmt` before committing
+
+### Changelog and Release Notes
+
+- **Every user-visible change** (API, CLI, configuration, behaviour, docs users read) adds a line to the top section of `CHANGELOG.md` (the next release, marked `Unreleased`) in the same commit as the change.
+- **Before tagging**, write or update `docs/release-notes/<version>.md`; `docs/release-notes/README.md` gives the steps and how to publish it as the GitHub release body.
 
 ### Adding Features
 

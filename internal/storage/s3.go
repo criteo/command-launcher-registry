@@ -134,8 +134,8 @@ func (s *S3Storage) persist() error {
 }
 
 // CreateRegistry creates a new registry
-func (s *S3Storage) CreateRegistry(ctx context.Context, r *models.Registry) error {
-	return s.BaseStorage.CreateRegistry(ctx, r, s.persist)
+func (s *S3Storage) CreateRegistry(ctx context.Context, r *models.Registry, guard Guard) error {
+	return s.BaseStorage.CreateRegistry(ctx, r, guard, s.persist)
 }
 
 // GetRegistry retrieves a registry by name
@@ -143,14 +143,14 @@ func (s *S3Storage) GetRegistry(ctx context.Context, name string) (*models.Regis
 	return s.BaseStorage.GetRegistry(ctx, name)
 }
 
-// UpdateRegistry updates registry metadata
-func (s *S3Storage) UpdateRegistry(ctx context.Context, r *models.Registry) error {
-	return s.BaseStorage.UpdateRegistry(ctx, r, s.persist)
+// UpdateRegistry applies a partial update to a registry
+func (s *S3Storage) UpdateRegistry(ctx context.Context, name string, u *models.RegistryUpdate, guard Guard) (*models.Registry, error) {
+	return s.BaseStorage.UpdateRegistry(ctx, name, u, guard, s.persist)
 }
 
 // DeleteRegistry deletes a registry and all its packages (atomic)
-func (s *S3Storage) DeleteRegistry(ctx context.Context, name string) error {
-	return s.BaseStorage.DeleteRegistry(ctx, name, s.persist)
+func (s *S3Storage) DeleteRegistry(ctx context.Context, name string, guard Guard) error {
+	return s.BaseStorage.DeleteRegistry(ctx, name, guard, s.persist)
 }
 
 // ListRegistries returns all registries
@@ -159,8 +159,8 @@ func (s *S3Storage) ListRegistries(ctx context.Context) ([]*models.Registry, err
 }
 
 // CreatePackage creates a new package in a registry
-func (s *S3Storage) CreatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return s.BaseStorage.CreatePackage(ctx, registryName, p, s.persist)
+func (s *S3Storage) CreatePackage(ctx context.Context, registryName string, p *models.Package, guard Guard) error {
+	return s.BaseStorage.CreatePackage(ctx, registryName, p, guard, s.persist)
 }
 
 // GetPackage retrieves a package from a registry
@@ -168,14 +168,14 @@ func (s *S3Storage) GetPackage(ctx context.Context, registryName, packageName st
 	return s.BaseStorage.GetPackage(ctx, registryName, packageName)
 }
 
-// UpdatePackage updates package metadata (preserves versions)
-func (s *S3Storage) UpdatePackage(ctx context.Context, registryName string, p *models.Package) error {
-	return s.BaseStorage.UpdatePackage(ctx, registryName, p, s.persist)
+// UpdatePackage applies a partial update to a package (preserves versions)
+func (s *S3Storage) UpdatePackage(ctx context.Context, registryName, packageName string, u *models.PackageUpdate, guard Guard) (*models.Package, error) {
+	return s.BaseStorage.UpdatePackage(ctx, registryName, packageName, u, guard, s.persist)
 }
 
 // DeletePackage deletes a package and all its versions (atomic)
-func (s *S3Storage) DeletePackage(ctx context.Context, registryName, packageName string) error {
-	return s.BaseStorage.DeletePackage(ctx, registryName, packageName, s.persist)
+func (s *S3Storage) DeletePackage(ctx context.Context, registryName, packageName string, guard Guard) error {
+	return s.BaseStorage.DeletePackage(ctx, registryName, packageName, guard, s.persist)
 }
 
 // ListPackages returns all packages in a registry
@@ -184,8 +184,8 @@ func (s *S3Storage) ListPackages(ctx context.Context, registryName string) ([]*m
 }
 
 // CreateVersion creates a new version for a package
-func (s *S3Storage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version) error {
-	return s.BaseStorage.CreateVersion(ctx, registryName, packageName, v, s.persist)
+func (s *S3Storage) CreateVersion(ctx context.Context, registryName, packageName string, v *models.Version, guard Guard) error {
+	return s.BaseStorage.CreateVersion(ctx, registryName, packageName, v, guard, s.persist)
 }
 
 // GetVersion retrieves a specific version
@@ -194,8 +194,8 @@ func (s *S3Storage) GetVersion(ctx context.Context, registryName, packageName, v
 }
 
 // DeleteVersion deletes a specific version
-func (s *S3Storage) DeleteVersion(ctx context.Context, registryName, packageName, version string) error {
-	return s.BaseStorage.DeleteVersion(ctx, registryName, packageName, version, s.persist)
+func (s *S3Storage) DeleteVersion(ctx context.Context, registryName, packageName, version string, guard Guard) error {
+	return s.BaseStorage.DeleteVersion(ctx, registryName, packageName, version, guard, s.persist)
 }
 
 // ListVersions returns all versions for a package

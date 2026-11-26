@@ -105,7 +105,8 @@ paths:
         - Authentication
       summary: Get authenticated user identity
       description: |
-        Returns the username of the currently authenticated user.
+        Returns the username of the currently authenticated user and whether
+        the caller is a server admin (`server_admin`).
         This endpoint requires authentication and is used by the CLI to verify credentials
         during login and to check current authentication status.
 
@@ -122,11 +123,21 @@ paths:
                 type: object
                 required:
                   - username
+                  - server_admin
                 properties:
                   username:
                     type: string
                     description: Username of the authenticated user
                     example: admin
+                  server_admin:
+                    type: boolean
+                    description: |
+                      True when role enforcement is on and the caller's username or one of
+                      its groups is in the server-admin list (`COLA_REGISTRY_ADMINS` or the
+                      `--admins` server flag; the variable name follows the branding prefix,
+                      e.g. `CDT_REGISTRY_ADMINS`). Enforcement is on when that list is
+                      non-empty and the auth type is not `none`; otherwise always false.
+                    example: false
         '401':
           description: Authentication required or invalid credentials
           headers:
@@ -221,6 +232,10 @@ paths:
       tags:
         - Registry
       summary: Create a new registry
+      description: |
+        Requires server admin when role enforcement is on (the server-admin
+        setting is non-empty); see ADR 0001. The caller may set `admins` to
+        hand the registry over to its registry admins.
       operationId: createRegistry
       security:
         - basicAuth: []
@@ -243,6 +258,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a server admin: "requires server admin on {name}"'
         '409':
           $ref: '#/components/responses/Conflict'
         '503':
@@ -275,6 +291,16 @@ paths:
       tags:
         - Registry
       summary: Update registry metadata
+      description: |
+        Partial update. A field present in the body replaces the stored value;
+        an explicit empty value (`""`, `[]`, `{}`) clears it; a field absent
+        from the body (or `null`) keeps the stored value. `name` is optional
+        and, when present, must equal the name in the URL (400 otherwise).
+        Packages are always preserved.
+
+        Requires registry admin of this registry (or server admin) when role
+        enforcement is on; this covers `description`, `custom_values` and
+        `admins`, so registry admins add and remove co-admins themselves.
       operationId: updateRegistry
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -299,6 +325,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a registry admin of this registry: "requires registry admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -308,7 +335,9 @@ paths:
       tags:
         - Registry
       summary: Delete a registry
-      description: Deletes the registry and all its packages
+      description: |
+        Deletes the registry and all its packages. Requires server admin when
+        role enforcement is on.
       operationId: deleteRegistry
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -321,6 +350,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a server admin: "requires server admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -355,6 +385,15 @@ paths:
       tags:
         - Package
       summary: Create a new package
+      description: |
+        Requires registry admin of this registry (or server admin) when role
+        enforcement is on. The caller sets `maintainers`; it is not added to
+        the list implicitly.
+
+        When the server runs with the required-maintainers rule
+        (`COLA_REGISTRY_REQUIRE_MAINTAINERS` / `--require-maintainers`, off by
+        default), `maintainers` missing or empty returns 400 with a message
+        saying that the server requires at least one maintainer.
       operationId: createPackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -379,6 +418,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a registry admin of this registry: "requires registry admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -410,11 +450,68 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
+    put:
+      tags:
+        - Package
+      summary: Update package metadata
+      description: |
+        Partial update. A field present in the body replaces the stored value;
+        an explicit empty value (`""`, `[]`, `{}`) clears it; a field absent
+        from the body (or `null`) keeps the stored value. `name` is optional
+        and, when present, must equal the package name in the URL (400
+        otherwise). Versions are always preserved.
+
+        Requires package maintainer of this package (or registry admin of its
+        registry, or server admin) when role enforcement is on; this covers
+        `description`, `custom_values` and `maintainers`, so maintainers add
+        and remove co-maintainers themselves. A package with an empty
+        `maintainers` list can be changed only by registry and server admins.
+
+        When the server runs with the required-maintainers rule
+        (`COLA_REGISTRY_REQUIRE_MAINTAINERS` / `--require-maintainers`, off by
+        default), `"maintainers": []` returns 400 with a message saying that
+        the server requires at least one maintainer. Omitting `maintainers`
+        keeps the stored list and is allowed, also for an existing package
+        whose list is empty.
+      operationId: updatePackage
+      parameters:
+        - $ref: '#/components/parameters/RegistryName'
+        - $ref: '#/components/parameters/PackageName'
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePackageRequest'
+      responses:
+        '200':
+          description: Package updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a maintainer of this package: "requires package maintainer on {name}/{package}"'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
     delete:
       tags:
         - Package
       summary: Delete a package
-      description: Deletes the package and all its versions
+      description: |
+        Deletes the package and all its versions. Requires registry admin of
+        this registry (or server admin) when role enforcement is on; package
+        maintainers cannot delete their package.
       operationId: deletePackage
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -428,6 +525,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a registry admin of this registry: "requires registry admin on {name}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -463,7 +561,10 @@ paths:
       tags:
         - Version
       summary: Create a new version
-      description: Creates an immutable package version
+      description: |
+        Creates an immutable package version. Requires package maintainer of
+        this package (or registry admin of its registry, or server admin) when
+        role enforcement is on.
       operationId: createVersion
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -489,6 +590,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a maintainer of this package: "requires package maintainer on {name}/{package}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -525,6 +627,9 @@ paths:
       tags:
         - Version
       summary: Delete a version
+      description: |
+        Requires package maintainer of this package (or registry admin of its
+        registry, or server admin) when role enforcement is on.
       operationId: deleteVersion
       parameters:
         - $ref: '#/components/parameters/RegistryName'
@@ -539,6 +644,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+          description: 'Caller is not a maintainer of this package: "requires package maintainer on {name}/{package}"'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -648,6 +754,17 @@ components:
         team: platform
         slack_channel: '#build-tools'
 
+    Principal:
+      type: string
+      description: |
+        A user or group: a username or a group name. One principal per array
+        element: an element must be non-empty and contain no comma and no
+        whitespace, otherwise the request fails with 400 naming the field and
+        the element.
+      minLength: 1
+      pattern: '^[^,\s]+$'
+      example: team-build
+
     Registry:
       type: object
       required:
@@ -665,9 +782,12 @@ components:
           example: Build tools registry
         admins:
           type: array
-          description: List of admin usernames (informational only, not enforced in v1)
+          description: |
+            Registry admins, as user or group principals. When role enforcement is
+            on, they hold the registry admin role on this registry (ADR 0001):
+            they update it, including this list, and manage its packages.
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['admin', 'team-build']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
@@ -703,24 +823,39 @@ components:
           example: Build tools registry
         admins:
           type: array
-          description: List of admin usernames (informational only, not enforced in v1)
+          description: |
+            Registry admins, as user or group principals. When role enforcement is
+            on, they hold the registry admin role on this registry (ADR 0001):
+            they update it, including this list, and manage its packages.
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['admin']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
 
     UpdateRegistryRequest:
       type: object
+      description: |
+        Partial update: only the fields present are changed, absent fields keep
+        their stored value, and an empty value clears the field.
       properties:
+        name:
+          type: string
+          description: Optional; must equal the registry name in the URL
+          example: build
         description:
           type: string
           maxLength: 4096
           example: Updated description
         admins:
           type: array
+          description: |
+            Registry admins, as user or group principals. When role enforcement is
+            on, they hold the registry admin role on this registry (ADR 0001):
+            they update it, including this list, and manage its packages.
+            Present: replaces the list (`[]` clears it); absent: kept.
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
         custom_values:
           $ref: '#/components/schemas/CustomValues'
 
@@ -741,9 +876,15 @@ components:
           example: Hotfix deployment tool
         maintainers:
           type: array
-          description: List of maintainer usernames (informational only, not enforced in v1)
+          description: |
+            Package maintainers, as user or group principals. When role
+            enforcement is on, they hold the package maintainer role on this
+            package (ADR 0001): they update it, including this list, and
+            publish and delete its versions. Registry admins of its registry
+            and server admins hold the role too. An empty list leaves the
+            package to them. The creator is not added implicitly.
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['team-build']
         custom_values:
           $ref: '#/components/schemas/CustomValues'
@@ -766,7 +907,6 @@ components:
       type: object
       required:
         - name
-        - maintainers
       properties:
         name:
           type: string
@@ -780,10 +920,49 @@ components:
           example: Hotfix deployment tool
         maintainers:
           type: array
-          description: List of maintainer usernames (informational only, not enforced in v1)
+          description: |
+            Package maintainers, as user or group principals. When role
+            enforcement is on, they hold the package maintainer role on this
+            package (ADR 0001): they update it, including this list, and
+            publish and delete its versions. Registry admins of its registry
+            and server admins hold the role too. An empty list leaves the
+            package to them. The creator is not added implicitly.
+            With the server's required-maintainers rule on, missing or empty
+            is rejected with 400.
           items:
-            type: string
+            $ref: '#/components/schemas/Principal'
           example: ['team-build']
+        custom_values:
+          $ref: '#/components/schemas/CustomValues'
+
+    UpdatePackageRequest:
+      type: object
+      description: |
+        Partial update: only the fields present are changed, absent fields keep
+        their stored value, and an empty value clears the field.
+      properties:
+        name:
+          type: string
+          description: Optional; must equal the package name in the URL
+          example: hotfix
+        description:
+          type: string
+          maxLength: 4096
+          example: Updated description
+        maintainers:
+          type: array
+          description: |
+            Package maintainers, as user or group principals. When role
+            enforcement is on, they hold the package maintainer role on this
+            package (ADR 0001): they update it, including this list, and
+            publish and delete its versions. Registry admins of its registry
+            and server admins hold the role too. An empty list leaves the
+            package to them. The creator is not added implicitly.
+            Present: replaces the list (`[]` clears it); absent: kept.
+            With the server's required-maintainers rule on, `[]` is rejected
+            with 400.
+          items:
+            $ref: '#/components/schemas/Principal'
         custom_values:
           $ref: '#/components/schemas/CustomValues'
 
@@ -877,6 +1056,7 @@ components:
             - INVALID_PARTITION
             - STORAGE_UNAVAILABLE
             - UNAUTHORIZED
+            - FORBIDDEN
             - RATE_LIMIT_EXCEEDED
           example: REGISTRY_NOT_FOUND
         message:
@@ -913,14 +1093,20 @@ components:
             message: Authentication required
 
     Forbidden:
-      description: Insufficient permissions
+      description: |
+        The caller is authenticated but lacks the role the write requires
+        (role enforcement on, ADR 0001). The message names the missing role
+        and its target; `details` carries both.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             code: FORBIDDEN
-            message: Insufficient permissions to perform this action
+            message: requires registry admin on repos
+            details:
+              required_role: registry admin
+              target: repos
 
     NotFound:
       description: Resource not found
