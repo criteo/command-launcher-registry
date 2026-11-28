@@ -200,6 +200,62 @@ func (c *S3Client) Download(ctx context.Context) ([]byte, error) {
 	return data, nil
 }
 
+// StatObject checks if the given object key exists.
+func (c *S3Client) StatObject(ctx context.Context, key string) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, S3DownloadTimeout)
+	defer cancel()
+
+	_, err := c.client.StatObject(ctx, c.bucket, key, minio.StatObjectOptions{})
+	if err != nil {
+		errResp := minio.ToErrorResponse(err)
+		if errResp.Code == "NoSuchKey" {
+			return false, nil
+		}
+		return false, CategorizeS3Error(S3OpDownload, err)
+	}
+
+	return true, nil
+}
+
+// UploadObject uploads data to the specified object key.
+func (c *S3Client) UploadObject(ctx context.Context, key string, data []byte, contentType string) error {
+	ctx, cancel := context.WithTimeout(ctx, S3UploadTimeout)
+	defer cancel()
+
+	reader := bytes.NewReader(data)
+	_, err := c.client.PutObject(ctx, c.bucket, key, reader, int64(len(data)),
+		minio.PutObjectOptions{ContentType: contentType},
+	)
+	if err != nil {
+		return CategorizeS3Error(S3OpUpload, err)
+	}
+
+	return nil
+}
+
+// DownloadObject downloads data from the specified object key.
+func (c *S3Client) DownloadObject(ctx context.Context, key string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, S3DownloadTimeout)
+	defer cancel()
+
+	obj, err := c.client.GetObject(ctx, c.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, CategorizeS3Error(S3OpDownload, err)
+	}
+	defer obj.Close()
+
+	data, err := io.ReadAll(obj)
+	if err != nil {
+		errResp := minio.ToErrorResponse(err)
+		if errResp.Code == "NoSuchKey" {
+			return nil, ErrManifestNotFound
+		}
+		return nil, CategorizeS3Error(S3OpDownload, err)
+	}
+
+	return data, nil
+}
+
 // ParseS3Token parses the storage token into access key and secret key.
 // Token format: ACCESS_KEY:SECRET_KEY
 // Falls back to AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY env vars if token is empty.

@@ -29,6 +29,7 @@ const (
 	OCIConfigMediaType = "application/vnd.oci.image.config.v1+json"
 	OCILayerMediaType  = "application/json"
 	OCIManifestTitle   = "registry.json"
+	OCIManifestBlob    = "manifest.json"
 )
 
 // OCIClient wraps oras-go for OCI registry operations
@@ -166,6 +167,11 @@ func (c *OCIClient) Pull(ctx context.Context) ([]byte, error) {
 // Push uploads the registry data to the OCI repository.
 // Uses 60s timeout. Always uses the "latest" tag.
 func (c *OCIClient) Push(ctx context.Context, data []byte) error {
+	return c.PushArtifact(ctx, data, OCIManifestTitle)
+}
+
+// PushArtifact uploads a JSON artifact to the OCI repository.
+func (c *OCIClient) PushArtifact(ctx context.Context, data []byte, title string) error {
 	start := time.Now()
 	c.logger.Info("Starting OCI push",
 		"reference", c.reference,
@@ -195,7 +201,7 @@ func (c *OCIClient) Push(ctx context.Context, data []byte) error {
 		Digest:    digest.FromBytes(data),
 		Size:      int64(len(data)),
 		Annotations: map[string]string{
-			ocispec.AnnotationTitle: OCIManifestTitle,
+			ocispec.AnnotationTitle: title,
 		},
 	}
 	if err := store.Push(ctx, layerDesc, bytes.NewReader(data)); err != nil {

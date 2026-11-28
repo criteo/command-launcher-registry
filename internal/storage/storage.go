@@ -22,6 +22,9 @@ var (
 
 	// ErrPartitionOverlap is returned when version partition ranges overlap
 	ErrPartitionOverlap = errors.New("partition ranges overlap")
+
+	// ErrManifestNotFound is returned when a version exists but has no manifest.
+	ErrManifestNotFound = errors.New("manifest not found")
 )
 
 // Store defines the interface for storage operations
@@ -48,6 +51,10 @@ type Store interface {
 
 	// Index generation
 	GetRegistryIndex(ctx context.Context, registryName string) ([]models.IndexEntry, error)
+
+	// Manifest operations
+	PutManifest(ctx context.Context, digest string, content []byte) error
+	GetManifest(ctx context.Context, digest string) ([]byte, error)
 
 	// Close closes the storage
 	Close() error

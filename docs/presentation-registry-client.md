@@ -338,7 +338,7 @@ cola-regctl version push mypackage 1.2.0 \
 | `--arch` | Yes | Target architecture (amd64, arm64, 386) |
 | `--artifact` | Yes | Path to binary artifact |
 | `--checksum` | No | SHA256 checksum for verification |
-| `--url` | No | Download URL (if external hosting) |
+| `--download-url` | No | Download URL (if external hosting) |
 
 ### Supported Platforms & Architectures
 

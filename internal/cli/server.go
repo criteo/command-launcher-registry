@@ -195,6 +195,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 		ListVersions:   versionHandler.ListVersions,
 		CreateVersion:  versionHandler.CreateVersion,
 		GetVersion:     versionHandler.GetVersion,
+		GetManifest:    versionHandler.GetManifest,
 		DeleteVersion:  versionHandler.DeleteVersion,
 	})
 
